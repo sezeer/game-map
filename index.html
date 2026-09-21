@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Game Map</title>
+    <link rel="manifest" href="manifest.json">
+
+<meta name="theme-color" content="#9e9482">
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+
+<meta
+    name="apple-mobile-web-app-status-bar-style"
+    content="black-translucent"
+>
+
+<meta
+    name="apple-mobile-web-app-title"
+    content="Game Map"
+>
+
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.css"
+    >
+
+    <link
+        rel="stylesheet"
+        href="style.css"
+    >
+</head>
+
+<body>
+
+    <div id="map"></div>
+    
+    <div id="searchBox">
+        <div id="routeInfo">
+    <span id="routeTime">-- dk</span>
+    <span>•</span>
+    <span id="routeDistance">-- km</span>
+</div>
+
+    <input
+        id="searchInput"
+        type="text"
+        placeholder="Nereye?"
+        autocomplete="off"
+    >
+
+    <button id="searchButton">
+        ARA
+    </button>
+
+    <button id="routeButton">
+        ROTA
+    </button>
+
+</div>
+    
+    <button id="locationButton">KONUMUM</button>
+
+    <script src="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.js"></script>
+
+    <script src="app.js"></script>
+
+</body>
+
+</html>
