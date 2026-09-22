@@ -6,8 +6,16 @@ const map = new maplibregl.Map({
     center: [32.85, 39.93],
 
     zoom: 11
+    
 });
+map.on(
+    "rotate",
+    function () {
 
+        updatePlayerDirection();
+
+    }
+);
 
 map.on("load", function () {
 
@@ -441,48 +449,35 @@ let lastHeadingLocation = null;
 let currentRouteCoordinates = [];
 let offRouteCount = 0;
 let lastRerouteAt = 0;
+let lastNavigationBearing = 0;
+let routePreviewReady = false;
+let deviceHeading = null;
+let lastGpsHeading = null;
+
+let smoothCameraLocation = null;
+let smoothCameraBearing = null;
+
+let centerOnNextGps = false;
+
+let headingListenerStarted = false;
 
 
 const locationButton =
     document.getElementById("locationButton");
 
-
-locationButton.addEventListener("click", function () {
-
-    if (watchId !== null) {
-
-        if (currentLocation !== null) {
-
-            map.easeTo({
-                center: [
-                    currentLocation.longitude,
-                    currentLocation.latitude
-                ],
-                zoom: 16,
-                duration: 800
-            });
-
-        }
-
-        return;
-    }
-
+function recenterToGps() {
 
     if (!navigator.geolocation) {
 
-        alert("Bu cihaz konum özelliğini desteklemiyor.");
+        alert(
+            "Bu cihaz konum özelliğini desteklemiyor."
+        );
 
         return;
     }
 
 
-    locationButton.textContent = "GPS AÇIK";
-    locationButton.classList.add(
-    "gps-active"
-);
-
-
-    watchId = navigator.geolocation.watchPosition(
+    navigator.geolocation.getCurrentPosition(
 
         function (position) {
 
@@ -494,8 +489,13 @@ locationButton.addEventListener("click", function () {
 
 
             currentLocation = {
-                latitude: latitude,
-                longitude: longitude
+
+                latitude:
+                    latitude,
+
+                longitude:
+                    longitude
+
             };
 
 
@@ -503,161 +503,221 @@ locationButton.addEventListener("click", function () {
                 longitude,
                 latitude
             );
-updateLiveInstruction(
-    latitude,
-    longitude
-);
-// =========================
-// HEDEFE ULAŞMA KONTROLÜ
-// =========================
-
-if (
-    navigationMode &&
-    destinationLocation !== null
-) {
-
-    const distanceToDestination =
-        calculateDistance(
-            currentLocation,
-            destinationLocation
-        );
 
 
-    console.log(
-        "Hedefe uzaklık:",
-        Math.round(distanceToDestination),
-        "metre"
-    );
+            updatePlayerDirection();
 
 
-    if (distanceToDestination <= 25) {
+            // Navigasyon açıksa
+            if (navigationMode) {
 
-        finishNavigation();
+                map.easeTo({
 
-        return;
+                    center: [
+                        longitude,
+                        latitude
+                    ],
 
-    }
+                    zoom: 17.3,
 
-}
-// =========================
-// ROTADAN SAPMA KONTROLÜ
-// =========================
+                    pitch: 60,
 
-if (
-    navigationMode &&
-    destinationLocation !== null &&
-    currentRouteCoordinates.length > 1
-) {
+                    bearing:
+                        smoothCameraBearing !== null
+                            ? smoothCameraBearing
+                            : map.getBearing(),
 
-    const gpsAccuracy =
-        position.coords.accuracy;
+                    offset: [
+                        0,
+                        window.innerHeight * 0.18
+                    ],
 
+                    duration: 700,
 
-    // GPS çok kötü durumdaysa
-    // yanlışlıkla yeni rota oluşturma
-    if (gpsAccuracy <= 50) {
+                    essential: true
 
-        const offRouteDistance =
-            distanceToRoute(
-                currentLocation,
-                currentRouteCoordinates
-            );
-
-
-        console.log(
-            "Rotaya uzaklık:",
-            Math.round(offRouteDistance),
-            "metre"
-        );
-
-
-        // Rotadan 40 metreden fazla uzaktaysak
-        if (offRouteDistance > 40) {
-
-            offRouteCount++;
-
-        }
-
-        else {
-
-            offRouteCount = 0;
-
-        }
-
-
-        // Tek GPS sıçramasında rota değiştirmiyoruz.
-        // İki ölçüm üst üste rotadan uzakta olmalı.
-        if (offRouteCount >= 2) {
-
-            const now =
-                Date.now();
-
-
-            // Arka arkaya sürekli sunucuya istek atmasın
-            if (
-                now - lastRerouteAt >
-                10000
-            ) {
-
-                console.log(
-                    "Rotadan çıkıldı. Yeni rota hesaplanıyor..."
-                );
-
-
-                lastRerouteAt =
-                    now;
-
-                offRouteCount =
-                    0;
-
-
-                createRoute(true);
+                });
 
             }
 
-        }
+            // Normal haritadaysak
+            else {
 
-    }
+                map.easeTo({
 
-}
-if (navigationMode) {
+                    center: [
+                        longitude,
+                        latitude
+                    ],
 
-    let bearing = map.getBearing();
+                    zoom: 16,
+
+                    pitch: 0,
+
+                    bearing: 0,
+
+                    offset: [
+                        0,
+                        0
+                    ],
+
+                    duration: 700,
+
+                    essential: true
+
+                });
+
+            }
+
+        },
 
 
-    // Telefon GPS yön bilgisi veriyorsa onu kullan
-    if (
-        position.coords.heading !== null &&
-        !isNaN(position.coords.heading)
-    ) {
+        function (error) {
 
-        bearing =
-            position.coords.heading;
-
-    }
-
-    // GPS yön vermiyorsa hareketten hesapla
-    else if (lastHeadingLocation !== null) {
-
-        const moved =
-            calculateDistance(
-                lastHeadingLocation,
-                currentLocation
+            console.error(
+                "Konuma gitme hatası:",
+                error
             );
 
+        },
 
-        if (moved >= 5) {
 
-            bearing =
-                calculateBearing(
-                    lastHeadingLocation,
-                    currentLocation
-                );
+        {
+            enableHighAccuracy: true,
+            maximumAge: 0,
+            timeout: 10000
+        }
+
+    );
+
+}
+locationButton.addEventListener(
+    "click",
+    function () {
+
+        // Her tıklamada o anki
+        // gerçek GPS konumuna git
+        recenterToGps();
+
+
+        // Telefonun baktığı yönü al
+        if (
+            typeof requestHeadingPermission ===
+            "function"
+        ) {
+
+            requestHeadingPermission();
 
         }
 
-    }
 
+        // =========================
+        // GPS ZATEN AÇIKSA
+        // SADECE KONUMUMA DÖN
+        // =========================
+
+        if (
+    watchId !== null &&
+    currentLocation !== null
+) {
+
+    goToMyLocation();
+
+    return;
+
+}
+
+
+        // =========================
+        // GPS DESTEĞİ
+        // =========================
+
+        if (!navigator.geolocation) {
+
+            alert(
+                "Bu cihaz konum özelliğini desteklemiyor."
+            );
+
+            return;
+
+        }
+
+
+        centerOnNextGps = true;
+
+
+        locationButton.textContent =
+            "GPS AÇIK";
+
+        locationButton.classList.add(
+            "gps-active"
+        );
+
+
+        // =========================
+        // GPS BAŞLAT
+        // =========================
+
+        watchId =
+            navigator.geolocation.watchPosition(
+
+                function (position) {
+
+                    const latitude =
+                        position.coords.latitude;
+
+                    const longitude =
+                        position.coords.longitude;
+
+
+                    currentLocation = {
+
+                        latitude:
+                            latitude,
+
+                        longitude:
+                            longitude
+
+                    };
+
+
+                    // =========================
+                    // GPS HAREKET YÖNÜ
+                    // =========================
+
+                    if (
+                        position.coords.heading !==
+                            null &&
+                        Number.isFinite(
+                            position.coords.heading
+                        )
+                    ) {
+
+                        lastGpsHeading =
+                            position.coords.heading;
+
+                    }
+
+
+                    // =========================
+                    // OYUNCUYU GÖSTER
+                    // =========================
+
+                    showPlayer(
+                        longitude,
+                        latitude
+                    );
+
+
+                    updatePlayerDirection();
+
+
+                    // =========================
+                    // İLK KONUM GELDİĞİNDE
+                    // HARİTAYI ORAYA GETİR
+                    // =========================
+
+                    if (centerOnNextGps) {
 
     map.easeTo({
 
@@ -666,67 +726,403 @@ if (navigationMode) {
             latitude
         ],
 
-        zoom: 16.5,
+        zoom: 16,
 
-        bearing: bearing,
+        pitch: 0,
 
-        pitch: 35,
+        bearing: 0,
 
-        offset: [
-            0,
-            140
-        ],
+        offset: [0, 0],
 
-        duration: 700
+        duration: 800,
+
+        essential: true
 
     });
 
-
-    lastHeadingLocation = {
-        latitude: latitude,
-        longitude: longitude
-    };
+    centerOnNextGps = false;
 
 }
-            if (!hasCenteredOnPlayer) {
-
-                map.easeTo({
-                    center: [
-                        longitude,
-                        latitude
-                    ],
-                    zoom: 16,
-                    duration: 1000
-                });
-
-                hasCenteredOnPlayer = true;
-            }
 
 
-            
-        },
+                    // =========================
+                    // CANLI YÖN TALİMATI
+                    // =========================
+
+                    updateLiveInstruction(
+                        latitude,
+                        longitude
+                    );
 
 
-        function (error) {
+                    // =========================
+                    // GEÇİLEN MOR ROTAYI SİL
+                    // =========================
 
-            console.error("GPS hatası:", error);
-
-            locationButton.textContent = "KONUMUM";
-
-            alert("Konum alınamadı.");
-
-        },
+                    updateRouteProgress();
 
 
-        {
-            enableHighAccuracy: true,
-            maximumAge: 1000,
-            timeout: 15000
-        }
+                    // =========================
+                    // HEDEFE ULAŞMA
+                    // =========================
 
-    );
+                    if (
+                        navigationMode &&
+                        destinationLocation !==
+                            null
+                    ) {
 
-});
+                        const distanceToDestination =
+                            calculateDistance(
+                                currentLocation,
+                                destinationLocation
+                            );
+
+
+                        if (
+                            distanceToDestination <=
+                            25
+                        ) {
+
+                            finishNavigation();
+
+                            return;
+
+                        }
+
+                    }
+
+
+                    // =========================
+                    // ROTADAN SAPMA
+                    // =========================
+
+                    if (
+                        navigationMode &&
+                        destinationLocation !==
+                            null &&
+                        currentRouteCoordinates
+                            .length > 1
+                    ) {
+
+                        const gpsAccuracy =
+                            position.coords
+                                .accuracy;
+
+
+                        if (
+                            gpsAccuracy <= 50
+                        ) {
+
+                            const offRouteDistance =
+                                distanceToRoute(
+                                    currentLocation,
+                                    currentRouteCoordinates
+                                );
+
+
+                            if (
+                                offRouteDistance >
+                                40
+                            ) {
+
+                                offRouteCount++;
+
+                            }
+
+                            else {
+
+                                offRouteCount = 0;
+
+                            }
+
+
+                            if (
+                                offRouteCount >= 2
+                            ) {
+
+                                const now =
+                                    Date.now();
+
+
+                                if (
+                                    now -
+                                        lastRerouteAt >
+                                    10000
+                                ) {
+
+                                    lastRerouteAt =
+                                        now;
+
+                                    offRouteCount =
+                                        0;
+
+
+                                    createRoute(
+                                        true
+                                    );
+
+                                }
+
+                            }
+
+                        }
+
+                    }
+
+
+                    // =========================
+                    // NAVİGASYON KAMERASI
+                    // =========================
+
+                    if (navigationMode) {
+
+                        // KONUMU YUMUŞAT
+                        if (
+                            smoothCameraLocation ===
+                            null
+                        ) {
+
+                            smoothCameraLocation = {
+
+                                latitude:
+                                    latitude,
+
+                                longitude:
+                                    longitude
+
+                            };
+
+                        }
+
+                        else {
+
+                            const locationSmoothing =
+                                0.65;
+
+
+                            smoothCameraLocation
+                                .latitude +=
+                                (
+                                    latitude -
+                                    smoothCameraLocation
+                                        .latitude
+                                ) *
+                                locationSmoothing;
+
+
+                            smoothCameraLocation
+                                .longitude +=
+                                (
+                                    longitude -
+                                    smoothCameraLocation
+                                        .longitude
+                                ) *
+                                locationSmoothing;
+
+                        }
+
+
+                        // =====================
+                        // HEDEF YÖN
+                        // =====================
+
+                        let targetBearing =
+
+                            smoothCameraBearing !==
+                            null
+
+                                ? smoothCameraBearing
+
+                                : map.getBearing();
+
+
+                        if (
+                            position.coords
+                                .heading !== null &&
+                            Number.isFinite(
+                                position.coords
+                                    .heading
+                            )
+                        ) {
+
+                            targetBearing =
+                                position.coords
+                                    .heading;
+
+                        }
+
+                        else if (
+                            currentRouteCoordinates
+                                .length > 2
+                        ) {
+
+                            const lookAheadIndex =
+                                Math.min(
+                                    8,
+                                    currentRouteCoordinates
+                                        .length - 1
+                                );
+
+
+                            const aheadPoint = {
+
+                                longitude:
+                                    currentRouteCoordinates[
+                                        lookAheadIndex
+                                    ][0],
+
+                                latitude:
+                                    currentRouteCoordinates[
+                                        lookAheadIndex
+                                    ][1]
+
+                            };
+
+
+                            targetBearing =
+                                calculateBearing(
+                                    currentLocation,
+                                    aheadPoint
+                                );
+
+                        }
+
+
+                        // =====================
+                        // YÖNÜ YUMUŞAT
+                        // =====================
+
+                        if (
+                            smoothCameraBearing ===
+                            null
+                        ) {
+
+                            smoothCameraBearing =
+                                targetBearing;
+
+                        }
+
+                        else {
+
+                            smoothCameraBearing =
+                                smoothAngle(
+                                    smoothCameraBearing,
+                                    targetBearing,
+                                    0.25
+                                );
+
+                        }
+
+
+                        // =====================
+                        // KAMERAYI TAKİP ETTİR
+                        // =====================
+
+                        map.easeTo({
+
+                            center: [
+
+                                smoothCameraLocation
+                                    .longitude,
+
+                                smoothCameraLocation
+                                    .latitude
+
+                            ],
+
+                            zoom: 17.3,
+
+                            pitch: 60,
+
+                            bearing:
+                                smoothCameraBearing,
+
+                            offset: [
+                                0,
+                                window.innerHeight *
+                                    0.18
+                            ],
+
+                            duration: 850,
+
+                            easing:
+                                function (t) {
+
+                                    return (
+                                        1 -
+                                        Math.pow(
+                                            1 - t,
+                                            3
+                                        )
+                                    );
+
+                                },
+
+                            essential: true
+
+                        });
+
+
+                        updatePlayerDirection();
+
+                    }
+
+                },
+
+
+                // =========================
+                // GPS HATASI
+                // =========================
+
+                function (error) {
+
+                    console.error(
+                        "GPS hatası:",
+                        error
+                    );
+
+
+                    watchId = null;
+
+                    centerOnNextGps =
+                        false;
+
+
+                    locationButton.textContent =
+                        "KONUMUM";
+
+                    locationButton.classList.remove(
+                        "gps-active"
+                    );
+
+
+                    alert(
+                        "Konum alınamadı."
+                    );
+
+                },
+
+
+                // =========================
+                // GPS AYARLARI
+                // =========================
+
+                {
+                    enableHighAccuracy:
+                        true,
+
+                    maximumAge:
+                        1000,
+
+                    timeout:
+                        15000
+                }
+
+            );
+
+    }
+);
 // =========================
 // OYUNCU MARKERI
 // =========================
@@ -811,6 +1207,8 @@ function calculateDistance(point1, point2) {
 
 
     return earthRadius * c;
+    }
+
     function calculateBearing(point1, point2) {
 
     const lat1 =
@@ -848,6 +1246,272 @@ function calculateDistance(point1, point2) {
 
 
     return bearing;
+}
+function smoothAngle(
+    currentAngle,
+    targetAngle,
+    amount
+) {
+
+    const difference =
+        (
+            (
+                targetAngle -
+                currentAngle +
+                540
+            ) % 360
+        ) - 180;
+
+
+    return (
+        currentAngle +
+        difference * amount +
+        360
+    ) % 360;
+}
+function updatePlayerDirection() {
+
+    if (!playerMarker) {
+        return;
+    }
+
+
+    let heading =
+        deviceHeading;
+
+
+    if (
+        heading === null &&
+        lastGpsHeading !== null
+    ) {
+
+        heading =
+            lastGpsHeading;
+
+    }
+
+
+    if (heading === null) {
+        return;
+    }
+
+
+    const mapBearing =
+        map.getBearing();
+
+
+    const relativeHeading =
+        (
+            heading -
+            mapBearing +
+            360
+        ) % 360;
+
+
+    const markerElement =
+        playerMarker.getElement();
+
+
+    markerElement.style.rotate =
+        relativeHeading + "deg";
+}
+function handleDeviceOrientation(event) {
+
+    let heading = null;
+
+
+    // iPhone / Safari
+    if (
+        typeof event.webkitCompassHeading ===
+        "number"
+    ) {
+
+        heading =
+            event.webkitCompassHeading;
+
+    }
+
+
+    // Diğer telefonlar
+    else if (
+        event.absolute &&
+        typeof event.alpha ===
+        "number"
+    ) {
+
+        heading =
+            (
+                360 -
+                event.alpha
+            ) % 360;
+
+    }
+
+
+    if (heading !== null) {
+
+        deviceHeading =
+            heading;
+
+        updatePlayerDirection();
+
+    }
+
+}
+function startHeadingListener() {
+
+    if (headingListenerStarted) {
+        return;
+    }
+
+
+    window.addEventListener(
+        "deviceorientation",
+        handleDeviceOrientation,
+        true
+    );
+
+
+    window.addEventListener(
+        "deviceorientationabsolute",
+        handleDeviceOrientation,
+        true
+    );
+
+
+    headingListenerStarted = true;
+}
+async function requestHeadingPermission() {
+
+    try {
+
+        if (
+            typeof DeviceOrientationEvent !==
+            "undefined" &&
+
+            typeof DeviceOrientationEvent
+                .requestPermission ===
+            "function"
+        ) {
+
+            const permission =
+                await DeviceOrientationEvent
+                    .requestPermission();
+
+
+            if (
+                permission ===
+                "granted"
+            ) {
+
+                startHeadingListener();
+
+            }
+
+        }
+
+        else {
+
+            startHeadingListener();
+
+        }
+
+    }
+
+    catch (error) {
+
+        console.log(
+            "Pusula kullanılamadı:",
+            error
+        );
+
+    }
+
+}
+function goToMyLocation() {
+
+    if (currentLocation === null) {
+        return;
+    }
+
+
+    // Navigasyon açıksa
+    if (navigationMode) {
+
+        let bearing =
+            smoothCameraBearing !== null
+                ? smoothCameraBearing
+                : map.getBearing();
+
+
+        if (deviceHeading !== null) {
+
+            bearing =
+                deviceHeading;
+
+        }
+
+        else if (lastGpsHeading !== null) {
+
+            bearing =
+                lastGpsHeading;
+
+        }
+
+
+        map.easeTo({
+
+            center: [
+                currentLocation.longitude,
+                currentLocation.latitude
+            ],
+
+            zoom: 17.3,
+
+            pitch: 60,
+
+            bearing: bearing,
+
+            offset: [
+                0,
+                window.innerHeight * 0.18
+            ],
+
+            duration: 700,
+
+            essential: true
+
+        });
+
+    }
+
+
+    // Normal haritadaysak
+    else {
+
+        map.easeTo({
+
+            center: [
+                currentLocation.longitude,
+                currentLocation.latitude
+            ],
+
+            zoom: 16,
+
+            pitch: 0,
+
+            bearing: 0,
+
+            offset: [0, 0],
+
+            duration: 700,
+
+            essential: true
+
+        });
+
+    }
+
 }
 function distanceToRoute(point, coordinates) {
 
@@ -961,6 +1625,118 @@ function distanceToRoute(point, coordinates) {
 
     return minimumDistance;
 }
+function findNearestRouteIndex(
+    point,
+    coordinates
+) {
+
+    let nearestIndex = 0;
+    let nearestDistance = Infinity;
+
+
+    for (
+        let i = 0;
+        i < coordinates.length;
+        i++
+    ) {
+
+        const routePoint = {
+
+            longitude:
+                coordinates[i][0],
+
+            latitude:
+                coordinates[i][1]
+
+        };
+
+
+        const distance =
+            calculateDistance(
+                point,
+                routePoint
+            );
+
+
+        if (
+            distance <
+            nearestDistance
+        ) {
+
+            nearestDistance =
+                distance;
+
+            nearestIndex =
+                i;
+
+        }
+
+    }
+
+
+    return nearestIndex;
+}
+
+
+
+function updateRouteProgress() {
+
+    if (
+        !navigationMode ||
+        currentRouteCoordinates.length < 2
+    ) {
+        return;
+    }
+
+
+    const nearestIndex =
+        findNearestRouteIndex(
+            currentLocation,
+            currentRouteCoordinates
+        );
+
+
+    // Geçtiğimiz rota bölümünü at
+    if (nearestIndex > 0) {
+
+        currentRouteCoordinates =
+            currentRouteCoordinates.slice(
+                nearestIndex
+            );
+
+    }
+
+
+    // Haritadaki mor çizgiyi güncelle
+    const routeSource =
+        map.getSource("route");
+
+
+    if (
+        routeSource &&
+        currentRouteCoordinates.length > 1
+    ) {
+
+        routeSource.setData({
+
+            type: "Feature",
+
+            properties: {},
+
+            geometry: {
+
+                type: "LineString",
+
+                coordinates:
+                    currentRouteCoordinates
+
+            }
+
+        });
+
+    }
+
+}
 function finishNavigation() {
 
     navigationMode = false;
@@ -976,6 +1752,8 @@ function finishNavigation() {
 
     lastHeadingLocation = null;
     lastRouteUpdateLocation = null;
+    smoothCameraLocation = null;
+smoothCameraBearing = null;
 
 
     // Rota çizgilerini kaldır
@@ -1099,6 +1877,8 @@ function cancelNavigation() {
 
     navigationMode = false;
 
+    routePreviewReady = false;
+
     document.body.classList.remove(
         "navigation-active"
     );
@@ -1111,6 +1891,8 @@ function cancelNavigation() {
 
     lastHeadingLocation = null;
     lastRouteUpdateLocation = null;
+    smoothCameraLocation = null;
+smoothCameraBearing = null;
 
 
     // Rota çizgisini kaldır
@@ -1180,7 +1962,7 @@ function cancelNavigation() {
     }
 
 }
-}
+
 // =========================
 // DÖNÜŞ YAZISI
 // =========================
@@ -2193,12 +2975,6 @@ async function createRoute(isAutomatic = false) {
         const routeData =
             data.routes[0];
 
-navigationMode = true;
-document.body.classList.add(
-    "navigation-active"
-);
-routeButton.textContent =
-    "İPTAL";
 
         const route =
             routeData.geometry;
@@ -2397,28 +3173,48 @@ if (
 
       if (!isAutomatic) {
 
-    map.easeTo({
+    routePreviewReady = true;
 
-        center: [
-            currentLocation.longitude,
-            currentLocation.latitude
-        ],
+    navigationMode = false;
 
-        zoom: 16.5,
 
-        pitch: 0,
+    document.body.classList.remove(
+        "navigation-active"
+    );
 
-        bearing: 0,
 
-        offset: [
-            0,
-            140
-        ],
+    const coordinates =
+        route.coordinates;
 
-        duration: 1200
 
-    });
+    const bounds =
+        new maplibregl.LngLatBounds();
 
+
+    coordinates.forEach(
+        function (coordinate) {
+
+            bounds.extend(
+                coordinate
+            );
+
+        }
+    );
+
+
+    map.fitBounds(
+        bounds,
+        {
+            padding: 60,
+            pitch: 0,
+            bearing: 0,
+            duration: 1000
+        }
+    );
+
+
+    routeButton.textContent =
+        "BAŞLAT";
 }
 
     }
@@ -2442,9 +3238,7 @@ if (
     }
 
     finally {
-
-        routeUpdateInProgress =
-            false;
+            routeUpdateInProgress = false;
 
 
         if (!isAutomatic) {
@@ -2453,6 +3247,13 @@ if (
 
         routeButton.textContent =
             "İPTAL";
+
+    }
+
+    else if (routePreviewReady) {
+
+        routeButton.textContent =
+            "BAŞLAT";
 
     }
 
@@ -2468,21 +3269,114 @@ if (
     }
 
 }
+function startNavigation() {
+
+    if (
+        currentLocation === null ||
+        routePreviewReady === false
+    ) {
+        return;
+    }
+
+
+    navigationMode = true;
+    smoothCameraLocation = {
+
+    latitude:
+        currentLocation.latitude,
+
+    longitude:
+        currentLocation.longitude
+
+};
+
+
+smoothCameraBearing =
+    lastGpsHeading !== null
+        ? lastGpsHeading
+        : map.getBearing();
+
+    routePreviewReady = false;
+
+
+    document.body.classList.add(
+        "navigation-active"
+    );
+
+
+    routeButton.textContent =
+        "İPTAL";
+
+
+    // Navigasyon kamerasını
+    // bizim konumumuza getir
+    map.easeTo({
+
+        center: [
+            currentLocation.longitude,
+            currentLocation.latitude
+        ],
+
+        zoom: 17.3,
+
+        pitch: 60,
+
+        bearing:
+            lastNavigationBearing,
+
+        offset: [
+            0,
+            window.innerHeight * 0.18
+        ],
+
+        duration: 1200,
+
+        essential: true
+
+    });
+
+
+    // İlk dönüş bilgisini göster
+    if (navigationSteps.length > 0) {
+
+        updateLiveInstruction(
+            currentLocation.latitude,
+            currentLocation.longitude
+        );
+
+    }
+
+}
 routeButton.addEventListener(
     "click",
     function () {
 
+
+        // Şu anda navigasyondaysak:
+        // İPTAL
         if (navigationMode) {
 
             cancelNavigation();
 
-        }
-
-        else {
-
-            createRoute(false);
+            return;
 
         }
+
+
+        // Kuşbakışı rota hazırsa:
+        // BAŞLAT
+        if (routePreviewReady) {
+
+            startNavigation();
+
+            return;
+
+        }
+
+
+        // Henüz rota yoksa:
+        // ROTA oluştur
+        createRoute(false);
 
     }
 );
