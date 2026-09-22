@@ -1062,3 +1062,169 @@ body.navigation-active #routeButton {
 
     color: #111;
 }
+/* =========================================
+   TELEFON DÜZENİ
+   ========================================= */
+
+@media (max-width: 600px) {
+
+    /* ARAMA PANELİ */
+    #searchBox {
+
+        top: calc(
+            env(safe-area-inset-top) + 12px
+        );
+
+        left: 50%;
+
+        width: calc(100vw - 24px);
+        max-width: none;
+
+        transform: translateX(-50%);
+
+        box-sizing: border-box;
+
+        display: flex;
+
+        padding: 4px;
+    }
+
+
+    #searchInput {
+
+        flex: 1;
+
+        min-width: 0;
+
+        height: 42px;
+
+        font-size: 16px;
+    }
+
+
+    #searchButton,
+    #routeButton {
+
+        flex: 0 0 auto;
+
+        height: 42px;
+
+        padding-left: 12px;
+        padding-right: 12px;
+
+        font-size: 15px;
+    }
+
+
+    /* Navigasyonda da arama panelini aşırı küçültme */
+    body.navigation-active #searchBox {
+
+        transform:
+            translateX(-50%)
+            scale(0.94);
+
+        opacity: 0.95;
+    }
+
+
+    /* =====================================
+       DÖNÜŞ TALİMATI
+       ===================================== */
+
+    #navigationInstruction {
+
+        top: calc(
+            env(safe-area-inset-top) + 78px
+        );
+
+        left: 14px;
+
+        min-width: 0;
+        width: 205px;
+
+        padding: 8px 12px;
+
+        gap: 9px;
+
+        box-sizing: border-box;
+    }
+
+
+    #navigationArrow {
+
+        min-width: 42px;
+
+        font-size: 39px;
+    }
+
+
+    #navigationDistance {
+
+        font-size: 22px;
+    }
+
+
+    #navigationAction {
+
+        font-size: 16px;
+    }
+
+
+    /* =====================================
+       SÜRE / MESAFE
+       ===================================== */
+
+    #routeInfo {
+
+        top: calc(
+            env(safe-area-inset-top) + 82px
+        );
+
+        left: auto;
+        right: 14px;
+
+        transform: none;
+
+        padding: 7px 9px;
+
+        font-size: 15px;
+    }
+
+
+    /* =====================================
+       GPS
+       ===================================== */
+
+    #locationButton {
+
+        right: 14px;
+
+        bottom: calc(
+            env(safe-area-inset-bottom) + 18px
+        );
+
+        padding:
+            7px 10px
+            7px 27px;
+
+        font-size: 13px;
+    }
+
+
+    /* Arama sonuçları */
+    #searchResults {
+
+        top: calc(100% + 7px);
+
+        max-height: 260px;
+    }
+
+
+    .searchResultItem {
+
+        padding: 12px;
+
+        font-size: 14px;
+    }
+
+}
