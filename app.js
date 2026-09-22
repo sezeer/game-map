@@ -854,7 +854,7 @@ routeUpdateInProgress = true;
             start +
             ";" +
             end +
-            "?overview=full&geometries=geojson";
+              "?overview=full&geometries=geojson&steps=true";
 
 
         const response =
@@ -877,6 +877,74 @@ routeUpdateInProgress = true;
 
         const route =
             data.routes[0].geometry;
+            const steps =
+    data.routes[0].legs[0].steps;
+
+
+const nextStep =
+    steps.find(function (step) {
+
+        return step.maneuver.type !== "depart";
+
+    }) || steps[0];
+
+
+if (nextStep) {
+
+    const meters =
+        Math.round(nextStep.distance);
+
+    const modifier =
+        nextStep.maneuver.modifier;
+
+
+    let directionText =
+        "Devam et";
+
+
+    if (modifier === "right") {
+        directionText = "Sağa dön";
+    }
+
+    else if (modifier === "left") {
+        directionText = "Sola dön";
+    }
+
+    else if (modifier === "slight right") {
+        directionText = "Hafif sağa dön";
+    }
+
+    else if (modifier === "slight left") {
+        directionText = "Hafif sola dön";
+    }
+
+    else if (modifier === "sharp right") {
+        directionText = "Keskin sağa dön";
+    }
+
+    else if (modifier === "sharp left") {
+        directionText = "Keskin sola dön";
+    }
+
+    else if (modifier === "straight") {
+        directionText = "Düz devam et";
+    }
+
+
+    const instruction =
+        meters + " m sonra " + directionText;
+
+
+    document.getElementById(
+        "navigationInstruction"
+    ).textContent = instruction;
+
+
+    document.getElementById(
+        "navigationInstruction"
+    ).style.display = "block";
+
+}
             const distance =
     data.routes[0].distance;
 

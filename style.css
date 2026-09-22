@@ -145,3 +145,26 @@ body {
 
     display: none;
 }
+#navigationInstruction {
+    position: fixed;
+
+    top: 140px;
+    left: 50%;
+
+    transform: translateX(-50%);
+
+    padding: 12px 20px;
+
+    background-color: #111111;
+    color: white;
+
+    border: 2px solid white;
+    border-radius: 8px;
+
+    font-size: 18px;
+    font-weight: bold;
+
+    z-index: 20;
+
+    display: none;
+}
