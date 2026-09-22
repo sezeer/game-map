@@ -3483,3 +3483,551 @@ body.navigation-active #routeInfo {
     }
 
 }
+/* =========================================
+   MOBİL NAVİGASYON - SON YERLEŞİM
+   ========================================= */
+
+@media (max-width: 600px) {
+
+    body.navigation-active #navigationInstruction {
+
+        top:
+            calc(
+                env(safe-area-inset-top) + 8px
+            ) !important;
+
+        left: 8px !important;
+
+        width:
+            calc(100vw - 116px) !important;
+
+        max-width: none !important;
+        min-width: 0 !important;
+
+        min-height: 78px !important;
+
+        padding: 8px 9px !important;
+
+        gap: 7px !important;
+
+        box-sizing: border-box !important;
+    }
+
+
+    body.navigation-active #navigationArrow {
+
+        width: 48px !important;
+
+        font-size: 32px !important;
+
+        flex-shrink: 0;
+    }
+
+
+    body.navigation-active #navigationWords {
+
+        min-width: 0;
+        flex: 1;
+    }
+
+
+    body.navigation-active #navigationDistance {
+
+        font-size: 25px !important;
+        line-height: 1 !important;
+    }
+
+
+    body.navigation-active #navigationAction {
+
+        font-size: 16px !important;
+
+        line-height: 1 !important;
+
+        margin-top: 3px !important;
+
+        white-space: nowrap;
+    }
+
+
+    body.navigation-active #navigationRoad {
+
+        max-width: 145px !important;
+
+        font-size: 9px !important;
+
+        margin-top: 4px !important;
+
+        overflow: hidden;
+
+        white-space: nowrap;
+
+        text-overflow: ellipsis;
+    }
+
+
+    /* SAĞ ÜST İPTAL */
+
+    body.navigation-active #searchBox {
+
+        top:
+            calc(
+                env(safe-area-inset-top) + 8px
+            ) !important;
+
+        right: 8px !important;
+        left: auto !important;
+
+        width: 92px !important;
+
+        transform: none !important;
+    }
+
+
+    body.navigation-active #routeButton {
+
+        width: 92px !important;
+        min-width: 92px !important;
+
+        height: 40px !important;
+
+        padding: 0 !important;
+
+        font-size: 16px !important;
+    }
+
+
+    /* SÜRE / MESAFE */
+
+    body.navigation-active #routeInfo {
+
+        top:
+            calc(
+                env(safe-area-inset-top) + 56px
+            ) !important;
+
+        right: 8px !important;
+        left: auto !important;
+
+        width: 102px !important;
+        min-width: 102px !important;
+
+        padding: 6px 4px !important;
+
+        font-size: 14px !important;
+
+        white-space: nowrap;
+
+        box-sizing: border-box;
+    }
+
+}
+/* =========================================
+   PLAYER KONUM DAMLASI
+   ========================================= */
+
+#playerMarker {
+
+    width: 30px !important;
+    height: 34px !important;
+
+    display: flex !important;
+
+    align-items: center;
+    justify-content: center;
+
+    pointer-events: none;
+
+    z-index: 500 !important;
+
+    transform-origin:
+        50% 50%;
+}
+
+
+/* =========================================
+   TEK OYUNCU DAMLASI
+   ========================================= */
+
+#playerMarker {
+
+    width: 30px !important;
+    height: 34px !important;
+
+    background: transparent !important;
+
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+
+    transform-origin: 50% 50%;
+
+    pointer-events: none;
+}
+
+
+/* Eski damla/pseudo-element varsa kapat */
+
+#playerMarker::before,
+#playerMarker::after {
+
+    content: none !important;
+
+    display: none !important;
+
+}
+
+
+
+/* =========================================
+   PLAYER MARKER - TEMİZ RESET
+   ========================================= */
+
+#playerMarker {
+
+    width: 32px !important;
+    height: 36px !important;
+
+    padding: 0 !important;
+    margin: 0 !important;
+
+    background: transparent !important;
+
+    border: none !important;
+    outline: none !important;
+
+    border-radius: 0 !important;
+
+    box-shadow: none !important;
+
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    overflow: visible !important;
+
+    pointer-events: none !important;
+
+    transform-origin: 50% 50% !important;
+}
+
+
+/* Eski şekilleri tamamen öldür */
+
+#playerMarker::before,
+#playerMarker::after {
+
+    content: none !important;
+    display: none !important;
+
+}
+
+
+/* =========================================
+   GTA PLAYER MARKER
+   ========================================= */
+
+#playerMarker {
+
+    width: 30px !important;
+    height: 34px !important;
+
+    padding: 0 !important;
+    margin: 0 !important;
+
+    background: transparent !important;
+
+    border: none !important;
+    outline: none !important;
+
+    border-radius: 0 !important;
+
+    box-shadow: none !important;
+
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    overflow: visible !important;
+
+    pointer-events: none !important;
+
+    transform-origin:
+        center center !important;
+}
+
+
+#playerMarker::before,
+#playerMarker::after {
+
+    content: none !important;
+
+    display: none !important;
+
+}
+
+
+.playerMarkerSvg {
+
+     width: 30px !important;
+    height: 34px !important;
+
+    display: block;
+
+    overflow: visible;
+
+    filter:
+        drop-shadow(
+            1px 2px 1px
+            rgba(0,0,0,0.35)
+        );
+}
+/* =========================================
+   TELEFON NAVİGASYON ÜST HUD - FINAL
+   ========================================= */
+
+@media (max-width: 600px) {
+
+    /* SOL: DÖNÜŞ BİLGİSİ */
+    body.navigation-active
+    #navigationInstruction {
+
+        position: fixed !important;
+
+        top:
+            calc(
+                env(safe-area-inset-top) +
+                8px
+            ) !important;
+
+        left: 8px !important;
+
+        right: auto !important;
+
+        width:
+            calc(100vw - 128px)
+            !important;
+
+        max-width: none !important;
+        min-width: 0 !important;
+
+        min-height: 78px !important;
+
+        padding:
+            8px 10px !important;
+
+        box-sizing:
+            border-box !important;
+
+        gap:
+            8px !important;
+
+    }
+
+
+    body.navigation-active
+    #navigationArrow {
+
+        width:
+            46px !important;
+
+        min-width:
+            46px !important;
+
+        font-size:
+            32px !important;
+
+        text-align:
+            center;
+
+    }
+
+
+    body.navigation-active
+    #navigationWords {
+
+        min-width: 0 !important;
+
+        flex: 1;
+
+        overflow: hidden;
+
+    }
+
+
+    body.navigation-active
+    #navigationDistance {
+
+        font-size:
+            27px !important;
+
+        line-height:
+            1 !important;
+
+        white-space:
+            nowrap;
+
+    }
+
+
+    body.navigation-active
+    #navigationAction {
+
+        margin-top:
+            3px !important;
+
+        font-size:
+            16px !important;
+
+        line-height:
+            1 !important;
+
+        white-space:
+            nowrap;
+
+    }
+
+
+    body.navigation-active
+    #navigationRoad {
+
+        margin-top:
+            4px !important;
+
+        max-width:
+            100% !important;
+
+        font-size:
+            9px !important;
+
+        overflow:
+            hidden;
+
+        white-space:
+            nowrap;
+
+        text-overflow:
+            ellipsis;
+
+    }
+
+
+    /* =====================================
+       SAĞ ÜST: İPTAL
+       ===================================== */
+
+    body.navigation-active
+    #searchBox {
+
+        position:
+            fixed !important;
+
+        top:
+            calc(
+                env(safe-area-inset-top) +
+                8px
+            ) !important;
+
+        right:
+            8px !important;
+
+        left:
+            auto !important;
+
+        width:
+            104px !important;
+
+        padding:
+            0 !important;
+
+        transform:
+            none !important;
+
+        background:
+            transparent !important;
+
+        border:
+            none !important;
+
+        outline:
+            none !important;
+
+        box-shadow:
+            none !important;
+
+    }
+
+
+    body.navigation-active
+    #routeButton {
+
+        width:
+            104px !important;
+
+        min-width:
+            104px !important;
+
+        height:
+            42px !important;
+
+        padding:
+            0 !important;
+
+        font-size:
+            16px !important;
+
+    }
+
+
+    /* =====================================
+       SAĞ ALT: KALAN SÜRE / MESAFE
+       ===================================== */
+
+    body.navigation-active
+    #routeInfo {
+
+        position:
+            fixed !important;
+
+        top:
+            calc(
+                env(safe-area-inset-top) +
+                57px
+            ) !important;
+
+        right:
+            8px !important;
+
+        left:
+            auto !important;
+
+        width:
+            104px !important;
+
+        min-width:
+            104px !important;
+
+        padding:
+            7px 4px !important;
+
+        box-sizing:
+            border-box !important;
+
+        transform:
+            none !important;
+
+        font-size:
+            13px !important;
+
+        line-height:
+            1 !important;
+
+        white-space:
+            nowrap;
+
+        text-align:
+            center;
+
+    }
+
+}

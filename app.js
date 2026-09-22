@@ -770,11 +770,8 @@ if (
                     // =========================
 
                     showPlayer(
-
     displayedLocation.longitude,
-
     displayedLocation.latitude
-
 );
 
 
@@ -1214,22 +1211,95 @@ if (
 // OYUNCU MARKERI
 // =========================
 
-function showPlayer(longitude, latitude) {
+function showPlayer(
+    longitude,
+    latitude
+) {
+
+    if (
+        !Number.isFinite(longitude) ||
+        !Number.isFinite(latitude)
+    ) {
+        return;
+    }
+
 
     if (playerMarker === null) {
 
         const markerElement =
             document.createElement("div");
 
+
         markerElement.id =
             "playerMarker";
 
 
+        markerElement.innerHTML = `
+
+    <svg
+        class="playerMarkerSvg"
+        viewBox="0 0 64 64"
+        xmlns="http://www.w3.org/2000/svg"
+    >
+
+        <!-- SİYAH DIŞ KONTUR -->
+        <path
+            d="
+                M32 4
+
+                C30 4 29 6 28 9
+
+                L12 48
+
+                C10 53 14 56 19 53
+
+                L32 45
+
+                L45 53
+
+                C50 56 54 53 52 48
+
+                L36 9
+
+                C35 6 34 4 32 4
+
+                Z
+            "
+            fill="#111111"
+        />
+
+
+        <!-- BEYAZ İÇ -->
+        <path
+            d="
+                M32 10
+
+                L18 46
+
+                L32 38
+
+                L46 46
+
+                Z
+            "
+            fill="#ffffff"
+        />
+
+    </svg>
+
+`;
+
+
         playerMarker =
-    new maplibregl.Marker({
-        element: markerElement,
-        anchor: "bottom"
-    });
+            new maplibregl.Marker({
+
+                element:
+                    markerElement,
+
+                anchor:
+                    "center"
+
+            });
 
 
         playerMarker
