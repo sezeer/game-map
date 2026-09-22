@@ -2357,8 +2357,22 @@ function updatePlayerDirection() {
         playerMarker.getElement();
 
 
-    markerElement.style.rotate =
-        relativeHeading + "deg";
+    const markerSvg =
+        markerElement.querySelector(
+            ".playerMarkerSvg"
+        );
+
+
+    if (!markerSvg) {
+        return;
+    }
+
+
+    markerSvg.style.transform =
+        "rotate(" +
+        relativeHeading +
+        "deg)";
+
 }
 function handleDeviceOrientation(event) {
 

@@ -4031,3 +4031,12 @@ body.navigation-active #routeInfo {
     }
 
 }
+.playerMarkerSvg {
+
+    transform-origin:
+        50% 50% !important;
+
+    transition:
+        transform 0.15s linear;
+
+}
