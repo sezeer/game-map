@@ -460,6 +460,15 @@ let smoothCameraBearing = null;
 let centerOnNextGps = false;
 
 let headingListenerStarted = false;
+let currentRouteTotalDistance = 0;
+let currentRouteTotalDuration = 0;
+
+let lastSpeedLocation = null;
+let lastSpeedTime = null;
+let lastRoadLookupStep = -1;
+let currentRoadName = "";
+let roadLookupRequestId = 0;
+let displayedLocation = null;
 
 
 const locationButton =
@@ -679,6 +688,51 @@ locationButton.addEventListener(
                             longitude
 
                     };
+                    displayedLocation = {
+
+    latitude:
+        latitude,
+
+    longitude:
+        longitude
+
+};
+
+
+// Navigasyondaysak ve rota varsa
+// görsel konumu yola oturt
+if (
+    navigationMode &&
+    currentRouteCoordinates.length > 1
+) {
+
+    const snappedPoint =
+        getNearestPointOnRoute(
+            currentLocation,
+            currentRouteCoordinates
+        );
+
+
+    // Yola 35 metreden yakınsak
+    // işareti yol üzerinde göster
+    if (
+        snappedPoint !== null &&
+        snappedPoint.distance <= 35
+    ) {
+
+        displayedLocation = {
+
+            latitude:
+                snappedPoint.latitude,
+
+            longitude:
+                snappedPoint.longitude
+
+        };
+
+    }
+
+}
 
 
                     // =========================
@@ -704,9 +758,12 @@ locationButton.addEventListener(
                     // =========================
 
                     showPlayer(
-                        longitude,
-                        latitude
-                    );
+
+    displayedLocation.longitude,
+
+    displayedLocation.latitude
+
+);
 
 
                     updatePlayerDirection();
@@ -760,6 +817,9 @@ locationButton.addEventListener(
                     // =========================
 
                     updateRouteProgress();
+                    updateNavigationStats(
+    position
+);
 
 
                     // =========================
@@ -885,13 +945,13 @@ locationButton.addEventListener(
 
                             smoothCameraLocation = {
 
-                                latitude:
-                                    latitude,
+    latitude:
+        displayedLocation.latitude,
 
-                                longitude:
-                                    longitude
+    longitude:
+        displayedLocation.longitude
 
-                            };
+};
 
                         }
 
@@ -904,9 +964,8 @@ locationButton.addEventListener(
                             smoothCameraLocation
                                 .latitude +=
                                 (
-                                    latitude -
-                                    smoothCameraLocation
-                                        .latitude
+                                    displayedLocation.latitude -
+smoothCameraLocation.latitude
                                 ) *
                                 locationSmoothing;
 
@@ -914,9 +973,8 @@ locationButton.addEventListener(
                             smoothCameraLocation
                                 .longitude +=
                                 (
-                                    longitude -
-                                    smoothCameraLocation
-                                        .longitude
+                                    displayedLocation.longitude -
+smoothCameraLocation.longitude
                                 ) *
                                 locationSmoothing;
 
@@ -1208,7 +1266,888 @@ function calculateDistance(point1, point2) {
 
     return earthRadius * c;
     }
+function calculateRemainingRouteDistance(
+    coordinates
+) {
 
+    if (
+        !coordinates ||
+        coordinates.length < 2 ||
+        currentLocation === null
+    ) {
+
+        return 0;
+
+    }
+
+
+    let totalDistance = 0;
+
+
+    // Önce bulunduğumuz yerden
+    // kalan rotanın ilk noktasına
+    totalDistance +=
+        calculateDistance(
+
+            currentLocation,
+
+            {
+                longitude:
+                    coordinates[0][0],
+
+                latitude:
+                    coordinates[0][1]
+            }
+
+        );
+
+
+    // Sonra kalan rota parçaları
+    for (
+        let i = 0;
+        i < coordinates.length - 1;
+        i++
+    ) {
+
+        const point1 = {
+
+            longitude:
+                coordinates[i][0],
+
+            latitude:
+                coordinates[i][1]
+
+        };
+
+
+        const point2 = {
+
+            longitude:
+                coordinates[i + 1][0],
+
+            latitude:
+                coordinates[i + 1][1]
+
+        };
+
+
+        totalDistance +=
+            calculateDistance(
+                point1,
+                point2
+            );
+
+    }
+
+
+    return totalDistance;
+}
+function isBadRoadName(name) {
+
+    if (!name) {
+        return true;
+    }
+
+
+    const value =
+        name
+            .trim()
+            .toLocaleLowerCase(
+                "tr-TR"
+            );
+
+
+    if (value.length < 4) {
+        return true;
+    }
+
+
+    const badNames = [
+
+        "sk",
+        "sk.",
+        "sok",
+        "sok.",
+
+        "cd",
+        "cd.",
+
+        "blv",
+        "blv.",
+
+        "yol"
+
+    ];
+
+
+    return badNames.includes(
+        value
+    );
+
+}
+
+function formatRoadName(name) {
+
+    if (!name) {
+        return "";
+    }
+
+
+    let formatted =
+        name.trim();
+
+
+    formatted =
+        formatted.replace(
+            /\s+SK\.?$/i,
+            " SOKAK"
+        );
+
+
+    formatted =
+        formatted.replace(
+            /\s+SOK\.?$/i,
+            " SOKAK"
+        );
+
+
+    formatted =
+        formatted.replace(
+            /\s+CD\.?$/i,
+            " CADDESİ"
+        );
+
+
+    formatted =
+        formatted.replace(
+            /\s+CAD\.?$/i,
+            " CADDESİ"
+        );
+
+
+    formatted =
+        formatted.replace(
+            /\s+BLV\.?$/i,
+            " BULVARI"
+        );
+
+
+    return formatted;
+}
+function getNearestPointOnRoute(
+    point,
+    coordinates
+) {
+
+    if (
+        !coordinates ||
+        coordinates.length < 2
+    ) {
+
+        return null;
+
+    }
+
+
+    const referenceLatitude =
+        point.latitude *
+        Math.PI / 180;
+
+
+    const metersPerLongitude =
+        111320 *
+        Math.cos(
+            referenceLatitude
+        );
+
+
+    const metersPerLatitude =
+        110540;
+
+
+    let bestPoint = null;
+
+    let bestDistance =
+        Infinity;
+
+
+    for (
+        let i = 0;
+        i < coordinates.length - 1;
+        i++
+    ) {
+
+        const first =
+            coordinates[i];
+
+        const second =
+            coordinates[i + 1];
+
+
+        const ax =
+            (
+                first[0] -
+                point.longitude
+            ) *
+            metersPerLongitude;
+
+
+        const ay =
+            (
+                first[1] -
+                point.latitude
+            ) *
+            metersPerLatitude;
+
+
+        const bx =
+            (
+                second[0] -
+                point.longitude
+            ) *
+            metersPerLongitude;
+
+
+        const by =
+            (
+                second[1] -
+                point.latitude
+            ) *
+            metersPerLatitude;
+
+
+        const dx =
+            bx - ax;
+
+        const dy =
+            by - ay;
+
+
+        const lengthSquared =
+            dx * dx +
+            dy * dy;
+
+
+        let t = 0;
+
+
+        if (
+            lengthSquared > 0
+        ) {
+
+            t =
+                -(
+                    ax * dx +
+                    ay * dy
+                ) /
+                lengthSquared;
+
+
+            t =
+                Math.max(
+                    0,
+                    Math.min(
+                        1,
+                        t
+                    )
+                );
+
+        }
+
+
+        const nearestX =
+            ax +
+            t * dx;
+
+
+        const nearestY =
+            ay +
+            t * dy;
+
+
+        const distance =
+            Math.sqrt(
+                nearestX *
+                nearestX +
+                nearestY *
+                nearestY
+            );
+
+
+        if (
+            distance <
+            bestDistance
+        ) {
+
+            bestDistance =
+                distance;
+
+
+            bestPoint = {
+
+                longitude:
+                    point.longitude +
+                    nearestX /
+                    metersPerLongitude,
+
+                latitude:
+                    point.latitude +
+                    nearestY /
+                    metersPerLatitude,
+
+                distance:
+                    distance
+
+            };
+
+        }
+
+    }
+
+
+    return bestPoint;
+}
+async function findRoadNameFromLocation(
+    longitude,
+    latitude
+) {
+
+    try {
+
+        const url =
+
+            "https://photon.komoot.io/reverse" +
+
+            "?lon=" +
+            longitude +
+
+            "&lat=" +
+            latitude;
+
+
+        const response =
+            await fetch(url);
+
+
+        if (!response.ok) {
+
+            return "";
+
+        }
+
+
+        const data =
+            await response.json();
+
+
+        if (
+            !data.features ||
+            data.features.length === 0
+        ) {
+
+            return "";
+
+        }
+
+
+        const properties =
+            data.features[0].properties ||
+            {};
+
+
+        return (
+
+            properties.street ||
+
+            properties.name ||
+
+            ""
+
+        );
+
+    }
+
+    catch (error) {
+
+        console.log(
+            "Yol adı alınamadı:",
+            error
+        );
+
+
+        return "";
+
+    }
+
+}
+function updateNavigationRoad(
+    step,
+    stepIndex,
+    roadElement
+) {
+
+    if (
+        !roadElement ||
+        !step
+    ) {
+
+        return;
+
+    }
+
+
+    // Aynı manevradaysak
+    // mevcut adı değiştirme.
+    if (
+        lastRoadLookupStep ===
+        stepIndex
+    ) {
+
+        if (
+            !isBadRoadName(
+                currentRoadName
+            )
+        ) {
+
+            roadElement.textContent =
+    formatRoadName(
+        currentRoadName
+    ).toLocaleUpperCase(
+        "tr-TR"
+    );
+
+
+            roadElement.style.display =
+                "block";
+
+        }
+
+        return;
+
+    }
+
+
+    // =========================
+    // YENİ MANEVRA
+    // =========================
+
+    lastRoadLookupStep =
+        stepIndex;
+
+
+    const osrmRoadName =
+
+        step.name ||
+
+        step.ref ||
+
+        step.destinations ||
+
+        "";
+
+
+    // OSRM düzgün isim verdiyse
+    // direkt kullan.
+    if (
+        !isBadRoadName(
+            osrmRoadName
+        )
+    ) {
+
+        currentRoadName =
+            osrmRoadName;
+
+
+        roadElement.textContent =
+    formatRoadName(
+        currentRoadName
+    ).toLocaleUpperCase(
+        "tr-TR"
+    );
+
+
+        roadElement.style.display =
+            "block";
+
+
+        return;
+
+    }
+
+
+    // =========================
+    // OSRM İSİM VERMEDİ
+    // PHOTON'A SOR
+    // =========================
+
+    if (
+        !step.maneuver ||
+        !step.maneuver.location
+    ) {
+
+        return;
+
+    }
+
+
+    const longitude =
+        step.maneuver.location[0];
+
+
+    const latitude =
+        step.maneuver.location[1];
+
+
+    roadLookupRequestId++;
+
+
+    const thisRequest =
+        roadLookupRequestId;
+
+
+    findRoadNameFromLocation(
+        longitude,
+        latitude
+    ).then(
+
+        function (foundRoad) {
+
+            // Bu sırada başka
+            // manevraya geçtiysek
+            // eski sonucu kullanma.
+            if (
+                thisRequest !==
+                roadLookupRequestId
+            ) {
+
+                return;
+
+            }
+
+
+            if (
+                stepIndex !==
+                currentStepIndex
+            ) {
+
+                return;
+
+            }
+
+
+            if (
+                isBadRoadName(
+                    foundRoad
+                )
+            ) {
+
+                return;
+
+            }
+
+
+            currentRoadName =
+                foundRoad;
+
+
+            roadElement.textContent =
+    formatRoadName(
+        currentRoadName
+    ).toLocaleUpperCase(
+        "tr-TR"
+    );
+
+
+            roadElement.style.display =
+                "block";
+
+        }
+
+    );
+
+}
+function updateNavigationStats(position) {
+
+    const speedValue =
+        document.getElementById(
+            "speedValue"
+        );
+
+    const routeTime =
+        document.getElementById(
+            "routeTime"
+        );
+
+    const routeDistance =
+        document.getElementById(
+            "routeDistance"
+        );
+
+    const roadElement =
+        document.getElementById(
+            "navigationRoad"
+        );
+
+
+    // =========================
+    // HIZ
+    // =========================
+
+    let speedKmh = 0;
+
+
+    if (
+        position.coords.speed !== null &&
+        Number.isFinite(
+            position.coords.speed
+        ) &&
+        position.coords.speed >= 0
+    ) {
+
+        speedKmh =
+            position.coords.speed *
+            3.6;
+
+    }
+
+    else {
+
+        const now =
+            Date.now();
+
+
+        if (
+            lastSpeedLocation !== null &&
+            lastSpeedTime !== null
+        ) {
+
+            const seconds =
+                (
+                    now -
+                    lastSpeedTime
+                ) / 1000;
+
+
+            if (
+                seconds >= 0.5 &&
+                seconds <= 10
+            ) {
+
+                const moved =
+                    calculateDistance(
+                        lastSpeedLocation,
+                        currentLocation
+                    );
+
+
+                speedKmh =
+                    (
+                        moved /
+                        seconds
+                    ) *
+                    3.6;
+
+            }
+
+        }
+
+
+        lastSpeedTime =
+            now;
+
+        lastSpeedLocation = {
+
+            latitude:
+                currentLocation.latitude,
+
+            longitude:
+                currentLocation.longitude
+
+        };
+
+    }
+
+
+    // Küçük GPS titreşimlerini
+    // hız olarak gösterme
+    if (speedKmh < 2) {
+
+        speedKmh = 0;
+
+    }
+
+
+    // GPS sapması saçma değer üretmesin
+    speedKmh =
+        Math.min(
+            speedKmh,
+            250
+        );
+
+
+    if (speedValue) {
+
+        speedValue.textContent =
+            Math.round(
+                speedKmh
+            );
+
+    }
+
+
+    // =========================
+    // KALAN MESAFE / SÜRE
+    // =========================
+
+    if (
+        navigationMode &&
+        currentRouteCoordinates.length > 1
+    ) {
+
+        const remainingDistance =
+            calculateRemainingRouteDistance(
+                currentRouteCoordinates
+            );
+
+
+        if (routeDistance) {
+
+            if (
+                remainingDistance >=
+                1000
+            ) {
+
+                routeDistance.textContent =
+                    (
+                        remainingDistance /
+                        1000
+                    ).toFixed(1) +
+                    " KM";
+
+            }
+
+            else {
+
+                routeDistance.textContent =
+                    Math.max(
+                        0,
+                        Math.round(
+                            remainingDistance /
+                            10
+                        ) * 10
+                    ) +
+                    " M";
+
+            }
+
+        }
+
+
+        if (
+            routeTime &&
+            currentRouteTotalDistance > 0 &&
+            currentRouteTotalDuration > 0
+        ) {
+
+            const ratio =
+                Math.min(
+                    1,
+                    remainingDistance /
+                    currentRouteTotalDistance
+                );
+
+
+            const remainingSeconds =
+                currentRouteTotalDuration *
+                ratio;
+
+
+            const remainingMinutes =
+                Math.max(
+                    1,
+                    Math.ceil(
+                        remainingSeconds /
+                        60
+                    )
+                );
+
+
+            routeTime.textContent =
+                remainingMinutes +
+                " DK";
+
+        }
+
+    }
+
+
+    // =========================
+    // BULUNDUĞUN YOL
+    // =========================
+
+    if (roadElement) {
+
+        const currentRoadStep =
+            navigationSteps[
+                Math.max(
+                    0,
+                    currentStepIndex - 1
+                )
+            ];
+
+
+        const nextRoadStep =
+            navigationSteps[
+                currentStepIndex
+            ];
+
+
+        const roadName =
+
+            (
+                currentRoadStep &&
+                currentRoadStep.name
+            )
+
+                ? currentRoadStep.name
+
+                : (
+                    nextRoadStep &&
+                    nextRoadStep.name
+                )
+
+                    ? nextRoadStep.name
+
+                    : "";
+
+
+        if (roadName.trim() !== "") {
+
+            roadElement.textContent =
+    formatRoadName(
+        currentRoadName
+    ).toLocaleUpperCase(
+        "tr-TR"
+    );
+
+            roadElement.style.display =
+                "block";
+
+        }
+
+        else {
+
+            roadElement.textContent =
+                "";
+
+            roadElement.style.display =
+                "none";
+
+        }
+
+    }
+
+}
     function calculateBearing(point1, point2) {
 
     const lat1 =
@@ -1424,6 +2363,61 @@ async function requestHeadingPermission() {
             "Pusula kullanılamadı:",
             error
         );
+
+    }
+
+}
+async function findRoadNameFromLocation(
+    longitude,
+    latitude
+) {
+
+    try {
+
+        const url =
+            "https://photon.komoot.io/reverse" +
+            "?lon=" +
+            longitude +
+            "&lat=" +
+            latitude;
+
+
+        const response =
+            await fetch(url);
+
+        const data =
+            await response.json();
+
+
+        if (
+            !data.features ||
+            data.features.length === 0
+        ) {
+            return "";
+        }
+
+
+        const properties =
+            data.features[0].properties || {};
+
+
+        return (
+            properties.street ||
+            properties.name ||
+            properties.locality ||
+            ""
+        );
+
+    }
+
+    catch (error) {
+
+        console.log(
+            "Yol adı bulunamadı:",
+            error
+        );
+
+        return "";
 
     }
 
@@ -1743,7 +2737,41 @@ function finishNavigation() {
     document.body.classList.remove(
     "navigation-active"
 );
+const speedHud =
+    document.getElementById(
+        "speedHud"
+    );
 
+if (speedHud) {
+
+    speedHud.style.display =
+        "none";
+
+}
+
+currentRoadName = "";
+
+lastRoadLookupStep = -1;
+
+roadLookupRequestId++;
+const roadElement =
+    document.getElementById(
+        "navigationRoad"
+    );
+
+if (roadElement) {
+
+    roadElement.textContent =
+        "";
+
+    roadElement.style.display =
+        "none";
+
+}
+
+
+lastSpeedLocation = null;
+lastSpeedTime = null;
     currentRouteCoordinates = [];
     navigationSteps = [];
 
@@ -1878,6 +2906,41 @@ function cancelNavigation() {
     navigationMode = false;
 
     routePreviewReady = false;
+    const speedHud =
+    document.getElementById(
+        "speedHud"
+    );
+
+if (speedHud) {
+
+    speedHud.style.display =
+        "none";
+
+}
+
+currentRoadName = "";
+
+lastRoadLookupStep = -1;
+
+roadLookupRequestId++;
+const roadElement =
+    document.getElementById(
+        "navigationRoad"
+    );
+
+if (roadElement) {
+
+    roadElement.textContent =
+        "";
+
+    roadElement.style.display =
+        "none";
+
+}
+
+
+lastSpeedLocation = null;
+lastSpeedTime = null;
 
     document.body.classList.remove(
         "navigation-active"
@@ -2085,6 +3148,11 @@ function updateLiveInstruction(latitude, longitude) {
         document.getElementById(
             "navigationAction"
         );
+    
+    const roadElement =
+    document.getElementById(
+        "navigationRoad"
+    );
 
 
     if (
@@ -2120,7 +3188,11 @@ function updateLiveInstruction(latitude, longitude) {
         navigationSteps[
             currentStepIndex
         ];
-
+    updateNavigationRoad(
+    step,
+    currentStepIndex,
+    roadElement
+);    
 
     if (
         !step.maneuver ||
@@ -2505,7 +3577,96 @@ searchInput.addEventListener(
     }
 );
 
+async function searchNominatimFallback(query) {
 
+    try {
+
+        const url =
+            "https://nominatim.openstreetmap.org/search" +
+            "?format=jsonv2" +
+            "&limit=6" +
+            "&accept-language=tr" +
+            "&countrycodes=tr" +
+            "&q=" +
+            encodeURIComponent(query);
+
+
+        const response =
+            await fetch(url);
+
+
+        if (!response.ok) {
+            return [];
+        }
+
+
+        const results =
+            await response.json();
+
+
+        return results.map(
+            function (place) {
+
+                return {
+
+                    geometry: {
+
+                        coordinates: [
+
+                            Number(place.lon),
+
+                            Number(place.lat)
+
+                        ]
+
+                    },
+
+                    properties: {
+
+                        name:
+                            place.name ||
+                            place.display_name
+                                .split(",")[0],
+
+                        street:
+                            "",
+
+                        district:
+                            "",
+
+                        city:
+                            "",
+
+                        state:
+                            "",
+
+                        country:
+                            "Türkiye",
+
+                        display_name:
+                            place.display_name
+
+                    }
+
+                };
+
+            }
+        );
+
+    }
+
+    catch (error) {
+
+        console.log(
+            "Yedek arama hatası:",
+            error
+        );
+
+        return [];
+
+    }
+
+}
 async function searchPlacesLive(query) {
 
     const searchResults =
@@ -2530,7 +3691,7 @@ async function searchPlacesLive(query) {
 
         let url =
             "https://photon.komoot.io/api/" +
-            "?limit=6" +
+            "?limit=20" +
             "&q=" +
             encodeURIComponent(query);
 
@@ -2570,9 +3731,82 @@ async function searchPlacesLive(query) {
             await response.json();
 
 
-        const results =
-            data.features || [];
+        let results =
+    data.features || [];
 
+
+// Photon bulamadıysa
+// Nominatim ile tekrar ara
+if (results.length === 0) {
+
+    results =
+        await searchNominatimFallback(
+            query
+        );
+
+}
+// =========================
+// SONUÇLARI KONUMA GÖRE SIRALA
+// =========================
+
+if (
+    currentLocation !== null &&
+    results.length > 1
+) {
+
+    results.sort(
+        function (a, b) {
+
+            const locationA = {
+
+                longitude:
+                    a.geometry.coordinates[0],
+
+                latitude:
+                    a.geometry.coordinates[1]
+
+            };
+
+
+            const locationB = {
+
+                longitude:
+                    b.geometry.coordinates[0],
+
+                latitude:
+                    b.geometry.coordinates[1]
+
+            };
+
+
+            const distanceA =
+                calculateDistance(
+                    currentLocation,
+                    locationA
+                );
+
+
+            const distanceB =
+                calculateDistance(
+                    currentLocation,
+                    locationB
+                );
+
+
+            return (
+                distanceA -
+                distanceB
+            );
+
+        }
+    );
+// En yakın 6 sonucu göster
+results =
+    results.slice(
+        0,
+        6
+    );
+}
 
         searchResults.innerHTML = "";
 
@@ -2677,7 +3911,55 @@ async function searchPlacesLive(query) {
 
                 item.className =
                     "searchResultItem";
+let resultDistanceText = "";
 
+
+if (
+    currentLocation !== null
+) {
+
+    const resultLocation = {
+
+        longitude:
+            result.geometry.coordinates[0],
+
+        latitude:
+            result.geometry.coordinates[1]
+
+    };
+
+
+    const resultDistance =
+        calculateDistance(
+            currentLocation,
+            resultLocation
+        );
+
+
+    if (
+        resultDistance < 1000
+    ) {
+
+        resultDistanceText =
+            Math.round(
+                resultDistance
+            ) +
+            " m";
+
+    }
+
+    else {
+
+        resultDistanceText =
+            (
+                resultDistance /
+                1000
+            ).toFixed(1) +
+            " km";
+
+    }
+
+}
 
                 const nameElement =
                     document.createElement(
@@ -2702,14 +3984,33 @@ async function searchPlacesLive(query) {
                 addressElement.textContent =
                     addressParts.join(", ");
 
+const distanceElement =
+    document.createElement(
+        "span"
+    );
 
-                item.appendChild(
-                    nameElement
-                );
+distanceElement.className =
+    "searchResultDistance";
 
+distanceElement.textContent =
+    resultDistanceText;
                 item.appendChild(
-                    addressElement
-                );
+    nameElement
+);
+
+item.appendChild(
+    addressElement
+);
+
+if (
+    resultDistanceText !== ""
+) {
+
+    item.appendChild(
+        distanceElement
+    );
+
+}
 
 
                 item.addEventListener(
@@ -2881,6 +4182,8 @@ function selectPhotonResult(result) {
 // ROTA
 // =========================
 
+const ROUTER_BASE_URL =
+    "https://router.project-osrm.org";
 const routeButton =
     document.getElementById("routeButton");
 
@@ -2938,11 +4241,12 @@ async function createRoute(isAutomatic = false) {
 
 
         const url =
-            "https://router.project-osrm.org/route/v1/driving/" +
-            start +
-            ";" +
-            end +
-            "?overview=full&geometries=geojson&steps=true";
+    ROUTER_BASE_URL +
+    "/route/v1/driving/" +
+    start +
+    ";" +
+    end +
+    "?overview=full&geometries=geojson&steps=true";
 
 
         const response =
@@ -2993,6 +4297,12 @@ async function createRoute(isAutomatic = false) {
 
         const duration =
             routeData.duration;
+
+        currentRouteTotalDistance =
+    distance;
+
+currentRouteTotalDuration =
+    duration;    
 
 
         const distanceKm =
@@ -3061,17 +4371,7 @@ currentStepIndex =
     steps.length >= 2 ? 1 : 0;
 
 
-if (
-    currentLocation !== null &&
-    navigationSteps.length > 0
-) {
 
-    updateLiveInstruction(
-        currentLocation.latitude,
-        currentLocation.longitude
-    );
-
-}
 
         // =========================
         // ROTA ÇİZGİSİ
@@ -3306,7 +4606,17 @@ smoothCameraBearing =
 
     routeButton.textContent =
         "İPTAL";
+const speedHud =
+    document.getElementById(
+        "speedHud"
+    );
 
+if (speedHud) {
+
+    speedHud.style.display =
+        "flex";
+
+}
 
     // Navigasyon kamerasını
     // bizim konumumuza getir
