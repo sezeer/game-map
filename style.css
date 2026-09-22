@@ -97,15 +97,15 @@ body {
     cursor: pointer;
 }
 #destinationMarker {
-    width: 18px;
-    height: 18px;
+    width: 26px;
+    height: 26px;
 
-    background-color: #d83228;
+    object-fit: contain;
 
-    border: 3px solid #111111;
-    border-radius: 50%;
+    image-rendering: auto;
 
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+    filter:
+        drop-shadow(0 1px 2px rgba(0, 0, 0, 0.65));
 }
 #routeButton {
     height: 48px;
@@ -153,7 +153,9 @@ body {
 
     transform: translateX(-50%);
 
-    padding: 12px 20px;
+    min-width: 220px;
+
+    padding: 10px 18px;
 
     background-color: #111111;
     color: white;
@@ -161,10 +163,902 @@ body {
     border: 2px solid white;
     border-radius: 8px;
 
+    z-index: 50;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    gap: 14px;
+}
+
+
+#navigationArrow {
+    font-size: 42px;
+    font-weight: bold;
+
+    line-height: 1;
+
+    min-width: 48px;
+
+    text-align: center;
+}
+
+
+#navigationText {
     font-size: 18px;
     font-weight: bold;
 
+    white-space: nowrap;
+}
+/* =========================================
+   GTA SAN ANDREAS TARZI HUD
+   ========================================= */
+
+
+/* Genel HUD yazı karakteri */
+#searchBox,
+#routeInfo,
+#navigationInstruction,
+#locationButton {
+
+    font-family:
+        Impact,
+        Haettenschweiler,
+        "Arial Narrow Bold",
+        Arial,
+        sans-serif;
+
+}
+
+
+/* =========================================
+   ARAMA PANELİ
+   ========================================= */
+
+#searchBox {
+
+    background: rgba(10, 10, 10, 0.88);
+
+    border: 3px solid #111;
+    border-radius: 3px;
+
+    padding: 5px;
+
+    box-shadow:
+        0 0 0 2px rgba(255,255,255,0.85),
+        4px 4px 0 rgba(0,0,0,0.55);
+
+}
+
+
+/* Arama kutusu */
+#searchInput {
+
+    background: #161616;
+
+    color: #ffffff;
+
+    border: 2px solid #000;
+    border-radius: 1px;
+
+    outline: 1px solid #bdbdbd;
+
+    font-family:
+        Arial,
+        sans-serif;
+
+    font-weight: bold;
+
+    text-shadow:
+        2px 2px 0 #000;
+
+}
+
+
+#searchInput::placeholder {
+
+    color: #b8b8b8;
+
+}
+
+
+/* =========================================
+   ARA BUTONU
+   ========================================= */
+
+#searchButton {
+
+    background: #181818;
+
+    color: #ffffff;
+
+    border: 2px solid #050505;
+    border-radius: 2px;
+
+    outline: 1px solid #dedede;
+
+    font-weight: bold;
+
+    text-shadow:
+        2px 2px 0 #000;
+
+    cursor: pointer;
+
+}
+
+
+#searchButton:active {
+
+    transform: translateY(2px);
+
+}
+
+
+/* =========================================
+   ROTA BUTONU
+   ========================================= */
+
+#routeButton {
+
+    background: #9fbd32;
+
+    color: #111111;
+
+    border: 2px solid #111111;
+    border-radius: 2px;
+
+    outline: 1px solid #dce98a;
+
+    font-weight: 900;
+
+    text-shadow:
+        1px 1px 0 rgba(255,255,255,0.25);
+
+    box-shadow:
+        inset 0 -3px 0 rgba(0,0,0,0.25);
+
+    cursor: pointer;
+
+}
+
+
+#routeButton:active {
+
+    transform: translateY(2px);
+
+}
+
+
+/* =========================================
+   SÜRE + MESAFE
+   ========================================= */
+
+#routeInfo {
+
+    background:
+        rgba(10,10,10,0.90);
+
+    color: #ffffff;
+
+    border: 3px solid #111;
+
+    border-radius: 2px;
+
+    outline: 2px solid rgba(255,255,255,0.9);
+
+    padding:
+        7px 14px;
+
+    font-size: 18px;
+
+    letter-spacing: 0.5px;
+
+    text-shadow:
+        2px 2px 0 #000,
+        -1px -1px 0 #000;
+
+    box-shadow:
+        4px 4px 0 rgba(0,0,0,0.45);
+
+}
+
+
+/* =========================================
+   NAVİGASYON TALİMATI
+   ========================================= */
+
+#navigationInstruction {
+
+    background:
+        rgba(8,8,8,0.91);
+
+    color: #ffffff;
+
+    border: 3px solid #111111;
+
+    outline: 2px solid rgba(255,255,255,0.92);
+
+    border-radius: 2px;
+
+    padding:
+        11px 20px;
+
+    min-width: 235px;
+
+    box-shadow:
+        5px 5px 0 rgba(0,0,0,0.5);
+
+    gap: 15px;
+
+}
+
+
+/* Büyük dönüş oku */
+#navigationArrow {
+
+    color: #ffffff;
+
+    font-size: 46px;
+
+    line-height: 1;
+
+    text-shadow:
+        3px 3px 0 #000,
+        -1px -1px 0 #000;
+
+}
+
+
+/* Dönüş yazısı */
+#navigationText {
+
+    color: #ffffff;
+
+    font-size: 20px;
+
+    letter-spacing: 0.5px;
+
+    text-shadow:
+        2px 2px 0 #000,
+        -1px -1px 0 #000;
+
+}
+
+
+/* =========================================
+   GPS BUTONU
+   ========================================= */
+
+#locationButton {
+
+    background:
+        rgba(10,10,10,0.92);
+
+    color: #ffffff;
+
+    border: 3px solid #111;
+
+    outline: 2px solid rgba(255,255,255,0.85);
+
+    border-radius: 2px;
+
+    font-size: 17px;
+
+    font-weight: bold;
+
+    letter-spacing: 0.5px;
+
+    text-shadow:
+        2px 2px 0 #000;
+
+    box-shadow:
+        4px 4px 0 rgba(0,0,0,0.45);
+
+}
+
+
+/* GPS açıkken yeşilimsi vurgu */
+#locationButton.active {
+
+    color: #b6d63c;
+
+}
+/* =========================================
+   GTA TARZI HUD FONTU
+   ========================================= */
+
+#searchButton,
+#routeButton,
+#routeInfo,
+#navigationInstruction,
+#locationButton {
+
+    font-family:
+        "Anton",
+        Impact,
+        sans-serif;
+
+    letter-spacing: 0.8px;
+
+}
+
+
+/* Navigasyon yazısı */
+#navigationText {
+
+    font-family:
+        "Anton",
+        Impact,
+        sans-serif;
+
+    font-size: 20px;
+    
+    letter-spacing: 0.8px;
+    
+    color: white;
+    
+    -webkit-text-stroke: 0.4px #000;
+    
+    text-shadow:
+        2px 2px 0 #000,
+        -1px -1px 0 #000,
+        1px -1px 0 #000,
+        -1px 1px 0 #000;
+
+}
+
+
+/* Büyük yön oku */
+#navigationArrow {
+
+    font-family:
+        Arial,
+        sans-serif;
+
+    font-size: 46px;
+
+    font-weight: 900;
+
+    text-shadow:
+        3px 3px 0 #000,
+        -1px -1px 0 #000;
+
+}
+
+
+/* Süre ve mesafe */
+#routeInfo {
+
+    font-size: 18px;
+
+    text-transform: uppercase;
+
+}
+
+
+/* GPS */
+#locationButton {
+
+    text-transform: uppercase;
+
+}
+
+
+/* ARA / ROTA */
+#searchButton,
+#routeButton {
+
+    font-size: 17px;
+
+    text-transform: uppercase;
+
+}
+/* =========================================
+   GTA HUD SON DOKUNUŞLAR
+   ========================================= */
+
+/* Arama alanı biraz daha eski oyun menüsü gibi */
+#searchBox {
+    border-radius: 0;
+
+    border: 2px solid #050505;
+
+    outline: 2px solid rgba(210, 210, 210, 0.9);
+
+    box-shadow:
+        4px 4px 0 rgba(0, 0, 0, 0.65);
+
+    background:
+        rgba(12, 12, 12, 0.92);
+}
+
+
+/* Arama yazısı */
+#searchInput {
+    border-radius: 0;
+
+    background:
+        rgba(20, 20, 20, 0.95);
+
+    border: 1px solid #777;
+
+    box-shadow:
+        inset 2px 2px 0 rgba(0,0,0,0.6);
+
+    color: white;
+}
+
+
+/* ARA */
+#searchButton {
+    border-radius: 0;
+
+    box-shadow:
+        inset 0 -3px 0 rgba(0,0,0,0.5);
+}
+
+
+/* ROTA */
+#routeButton {
+    border-radius: 0;
+
+    background: #8eae28;
+
+    box-shadow:
+        inset 0 -4px 0 rgba(0,0,0,0.35);
+
+    color: #111;
+}
+
+
+/* Navigasyon kutusu */
+#navigationInstruction {
+    border-radius: 0;
+
+    background:
+        rgba(5, 5, 5, 0.88);
+
+    box-shadow:
+        5px 5px 0 rgba(0,0,0,0.65);
+
+    min-width: 270px;
+}
+
+
+/* Yön oku biraz daha HUD gibi */
+#navigationArrow {
+    font-size: 50px;
+
+    color: white;
+
+    -webkit-text-stroke:
+        1px black;
+}
+
+
+/* Navigasyon metni */
+#navigationText {
+    font-size: 21px;
+
+    color: white;
+
+    letter-spacing: 1px;
+}
+
+
+/* GPS */
+#locationButton {
+    border-radius: 0;
+
+    background:
+        rgba(7,7,7,0.92);
+
+    box-shadow:
+        4px 4px 0 rgba(0,0,0,0.65);
+}
+/* =========================================
+   GTA TARZI NAVİGASYON HUD
+   ========================================= */
+
+#navigationInstruction {
+
+    position: fixed;
+
+    top: 125px;
+    left: 28px;
+
+    transform: none;
+
+    min-width: 245px;
+
+    padding: 10px 16px;
+
+    display: flex;
+    align-items: center;
+
+    gap: 14px;
+
+    background: rgba(5,5,5,0.88);
+
+    border: 2px solid #050505;
+    outline: 2px solid rgba(220,220,220,0.9);
+
+    border-radius: 0;
+
+    box-shadow:
+        5px 5px 0 rgba(0,0,0,0.6);
+
     z-index: 50;
+}
+
+
+#navigationArrow {
+
+    min-width: 55px;
+
+    font-family: Arial, sans-serif;
+
+    font-size: 52px;
+    font-weight: 900;
+
+    line-height: 1;
+
+    text-align: center;
+
+    color: white;
+
+    -webkit-text-stroke: 1px #000;
+
+    text-shadow:
+        3px 3px 0 #000;
+}
+
+
+#navigationWords {
+
+    display: flex;
+    flex-direction: column;
+
+    justify-content: center;
+
+    line-height: 1.05;
+}
+
+
+/* Üstte mesafe */
+#navigationDistance {
+
+    font-family:
+        "Anton",
+        Impact,
+        sans-serif;
+
+    font-size: 24px;
+
+    color: #ffffff;
+
+    letter-spacing: 1px;
+
+    text-shadow:
+        2px 2px 0 #000;
+}
+
+
+/* Altta hareket */
+#navigationAction {
+
+    margin-top: 4px;
+
+    font-family:
+        "Anton",
+        Impact,
+        sans-serif;
+
+    font-size: 18px;
+
+    color: #c5c5c5;
+
+    letter-spacing: 0.7px;
+
+    text-shadow:
+        2px 2px 0 #000;
+}
+/* =========================================
+   NAVİGASYONDA ARAMA PANELİNİ KÜÇÜLT
+   ========================================= */
+
+body.navigation-active #searchBox {
+
+    transform:
+        translateX(-50%)
+        scale(0.78);
+
+    transform-origin:
+        top center;
+
+    opacity: 0.72;
+
+    transition:
+        transform 0.3s ease,
+        opacity 0.3s ease;
+}
+
+
+/* Tekrar kullanmak istersek büyüsün */
+body.navigation-active #searchBox:focus-within,
+body.navigation-active #searchBox:hover {
+
+    transform:
+        translateX(-50%)
+        scale(1);
+
+    opacity: 1;
+}
+/* =========================================
+   GTA TARZI GPS GÖSTERGESİ
+   ========================================= */
+
+#locationButton {
+
+    right: 22px;
+    bottom: 22px;
+
+    width: auto;
+    min-width: 0;
+
+    padding: 8px 12px 8px 30px;
+
+    font-size: 14px;
+
+    background: rgba(5,5,5,0.90);
+
+    border: 2px solid #050505;
+    outline: 1px solid rgba(220,220,220,0.9);
+
+    border-radius: 0;
+
+    box-shadow:
+        3px 3px 0 rgba(0,0,0,0.6);
+}
+
+
+/* Soldaki GPS ışığı */
+#locationButton::before {
+
+    content: "";
+
+    position: absolute;
+
+    left: 11px;
+    top: 50%;
+
+    transform: translateY(-50%);
+
+    width: 9px;
+    height: 9px;
+
+    border-radius: 50%;
+
+    background: #777;
+
+    border: 1px solid #111;
+}
+
+
+/* GPS aktif */
+#locationButton.gps-active::before {
+
+    background: #9fbd32;
+
+    box-shadow:
+        0 0 5px #9fbd32;
+}
+
+
+#locationButton.gps-active {
+
+    color: #ffffff;
+}
+/* =========================================
+   NAVİGASYONDA ARAMA PANELİ
+   DAHA NET GÖRÜNSÜN
+   ========================================= */
+
+body.navigation-active #searchBox {
+
+    transform:
+        translateX(-50%)
+        scale(0.78);
+
+    transform-origin:
+        top center;
+
+    opacity: 0.92;
+
+    background:
+        rgba(10,10,10,0.94);
+
+    transition:
+        transform 0.3s ease,
+        opacity 0.3s ease;
+}
+
+
+body.navigation-active #searchInput {
+
+    background:
+        rgba(20,20,20,0.96);
+
+    color: white;
+}
+
+
+body.navigation-active #searchButton,
+body.navigation-active #routeButton {
+
+    opacity: 1;
+}
+/* =========================================
+   DÖNÜŞ YAKIN - ŞİMDİ UYARISI
+   ========================================= */
+
+#navigationInstruction.turn-now {
+
+    outline-color: #b02a78;
+
+    box-shadow:
+        5px 5px 0 rgba(0,0,0,0.65),
+        0 0 12px rgba(176,42,120,0.65);
+
+    animation:
+        turnPulse 0.65s ease-in-out
+        infinite alternate;
+}
+
+
+#navigationInstruction.turn-now #navigationDistance {
+
+    font-size: 30px;
+
+    color: #ffffff;
+}
+
+
+#navigationInstruction.turn-now #navigationArrow {
+
+    transform: scale(1.15);
+}
+
+
+#navigationInstruction.turn-now #navigationAction {
+
+    color: #ffffff;
+}
+
+
+@keyframes turnPulse {
+
+    from {
+        box-shadow:
+            5px 5px 0 rgba(0,0,0,0.65),
+            0 0 5px rgba(176,42,120,0.35);
+    }
+
+    to {
+        box-shadow:
+            5px 5px 0 rgba(0,0,0,0.65),
+            0 0 16px rgba(176,42,120,0.9);
+    }
+
+}
+/* Başlangıçta navigasyon kutusu görünmesin */
+#navigationInstruction {
+    display: none;
+}
+/* =========================================
+   ARAMA SONUÇLARI
+   ========================================= */
+
+#searchResults {
+
+    position: absolute;
+
+    top: calc(100% + 8px);
+    left: 0;
+    right: 0;
+
+    display: none;
+
+    background:
+        rgba(8, 8, 8, 0.96);
+
+    border: 2px solid #050505;
+
+    outline:
+        2px solid rgba(220,220,220,0.9);
+
+    box-shadow:
+        5px 5px 0 rgba(0,0,0,0.6);
+
+    z-index: 100;
+
+    max-height: 280px;
+
+    overflow-y: auto;
+}
+
+
+.searchResultItem {
+
+    padding:
+        11px 14px;
+
+    color: white;
+
+    font-family:
+        Arial,
+        sans-serif;
+
+    font-size: 14px;
+
+    font-weight: bold;
+
+    border-bottom:
+        1px solid #444;
+
+    cursor: pointer;
+
+    background:
+        rgba(10,10,10,0.96);
+}
+
+
+.searchResultItem:last-child {
+
+    border-bottom: none;
+
+}
+
+
+.searchResultItem:hover {
+
+    background:
+        #8eae28;
+
+    color:
+        #111;
+}
+
+
+.searchResultName {
 
     display: block;
+
+    color: white;
+
+    font-size: 15px;
+}
+
+
+.searchResultAddress {
+
+    display: block;
+
+    margin-top: 3px;
+
+    color: #aaa;
+
+    font-size: 12px;
+
+    font-weight: normal;
+}
+
+
+.searchResultItem:hover
+.searchResultName,
+.searchResultItem:hover
+.searchResultAddress {
+
+    color: #111;
 }

@@ -24,6 +24,14 @@
         href="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.css"
     >
 
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+
+<link rel="preconnect"
+      href="https://fonts.gstatic.com"
+      crossorigin>
+
+<link href="https://fonts.googleapis.com/css2?family=Anton&display=swap"
+      rel="stylesheet">
     <link
         rel="stylesheet"
         href="style.css"
@@ -51,6 +59,8 @@
         ROTA
     </button>
 
+    <div id="searchResults"></div>
+
 </div>
 
 
@@ -70,7 +80,17 @@
 
 
 <div id="navigationInstruction">
-    Yön hazırlanıyor...
+
+    <span id="navigationArrow"></span>
+
+    <div id="navigationWords">
+
+        <span id="navigationDistance"></span>
+
+        <span id="navigationAction"></span>
+
+    </div>
+
 </div>
     
     <button id="locationButton">KONUMUM</button>
