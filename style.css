@@ -4055,3 +4055,114 @@ body.navigation-active #routeInfo {
         fill-box;
 
 }
+/* =========================================
+   iPHONE ÜST ARAMA PANELİ - SAFE AREA
+   ========================================= */
+
+@media (max-width: 600px) {
+
+    body:not(.navigation-active) #searchBox {
+
+        position: fixed !important;
+
+        top:
+            calc(
+                env(safe-area-inset-top) +
+                12px
+            ) !important;
+
+        left: 10px !important;
+        right: 10px !important;
+
+        width: auto !important;
+        max-width: none !important;
+
+        transform: none !important;
+
+        box-sizing: border-box !important;
+
+        display: grid !important;
+
+        grid-template-columns:
+            minmax(0, 1fr)
+            58px
+            66px;
+
+        gap: 5px !important;
+
+        padding: 5px !important;
+
+        z-index: 2000 !important;
+    }
+
+
+    body:not(.navigation-active)
+    #searchInput {
+
+        width: 100% !important;
+        min-width: 0 !important;
+
+        height: 42px !important;
+
+        padding:
+            0 10px !important;
+
+        box-sizing:
+            border-box !important;
+
+        font-size:
+            16px !important;
+    }
+
+
+    body:not(.navigation-active)
+    #searchButton {
+
+        width: 58px !important;
+        min-width: 58px !important;
+
+        height: 42px !important;
+
+        padding: 0 !important;
+
+        font-size:
+            16px !important;
+    }
+
+
+    body:not(.navigation-active)
+    #routeButton {
+
+        width: 66px !important;
+        min-width: 66px !important;
+
+        height: 42px !important;
+
+        padding: 0 !important;
+
+        font-size:
+            16px !important;
+    }
+
+
+    /* Arama sonuçları da panelle aynı genişlikte */
+    #searchResults {
+
+        position: absolute !important;
+
+        top:
+            calc(100% + 5px) !important;
+
+        left: 0 !important;
+        right: 0 !important;
+
+        width: 100% !important;
+
+        box-sizing:
+            border-box !important;
+
+        max-height:
+            290px !important;
+    }
+
+}
