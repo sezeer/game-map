@@ -1,34 +1,36 @@
-const CACHE_NAME = "gamemap-v2";
-
-const FILES_TO_CACHE = [
-    "./",
-    "./index.html",
-    "./style.css",
-    "./app.js",
-    "./manifest.json"
-];
-
-self.addEventListener("install", function (event) {
-
-    event.waitUntil(
-        caches.open(CACHE_NAME)
-            .then(function (cache) {
-                return cache.addAll(FILES_TO_CACHE);
-            })
-    );
-
+self.addEventListener("install", function () {
+    self.skipWaiting();
 });
 
 
-self.addEventListener("fetch", function (event) {
+self.addEventListener("activate", function (event) {
 
-    event.respondWith(
-        caches.match(event.request)
-            .then(function (response) {
+    event.waitUntil(
 
-                return response || fetch(event.request);
+        caches.keys()
+            .then(function (cacheNames) {
+
+                return Promise.all(
+
+                    cacheNames.map(
+                        function (cacheName) {
+
+                            return caches.delete(
+                                cacheName
+                            );
+
+                        }
+                    )
+
+                );
 
             })
+            .then(function () {
+
+                return self.registration.unregister();
+
+            })
+
     );
 
 });
