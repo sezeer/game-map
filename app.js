@@ -431,9 +431,13 @@ else {
 let playerMarker = null;
 let currentLocation = null;
 let watchId = null;
+let navigationSteps = [];
+let currentStepIndex = 1;
 let hasCenteredOnPlayer = false;
 let lastRouteUpdateLocation = null;
 let routeUpdateInProgress = false;
+let navigationMode = false;
+let lastHeadingLocation = null;
 
 
 const locationButton =
@@ -493,8 +497,78 @@ locationButton.addEventListener("click", function () {
                 longitude,
                 latitude
             );
+updateLiveInstruction(
+    latitude,
+    longitude
+);
+if (navigationMode) {
+
+    let bearing = map.getBearing();
 
 
+    // Telefon GPS yön bilgisi veriyorsa onu kullan
+    if (
+        position.coords.heading !== null &&
+        !isNaN(position.coords.heading)
+    ) {
+
+        bearing =
+            position.coords.heading;
+
+    }
+
+    // GPS yön vermiyorsa hareketten hesapla
+    else if (lastHeadingLocation !== null) {
+
+        const moved =
+            calculateDistance(
+                lastHeadingLocation,
+                currentLocation
+            );
+
+
+        if (moved >= 5) {
+
+            bearing =
+                calculateBearing(
+                    lastHeadingLocation,
+                    currentLocation
+                );
+
+        }
+
+    }
+
+
+    map.easeTo({
+
+        center: [
+            longitude,
+            latitude
+        ],
+
+        zoom: 16.5,
+
+        bearing: bearing,
+
+        pitch: 35,
+
+        offset: [
+            0,
+            140
+        ],
+
+        duration: 700
+
+    });
+
+
+    lastHeadingLocation = {
+        latitude: latitude,
+        longitude: longitude
+    };
+
+}
             if (!hasCenteredOnPlayer) {
 
                 map.easeTo({
@@ -649,6 +723,235 @@ function calculateDistance(point1, point2) {
 
 
     return earthRadius * c;
+    function calculateBearing(point1, point2) {
+
+    const lat1 =
+        point1.latitude * Math.PI / 180;
+
+    const lat2 =
+        point2.latitude * Math.PI / 180;
+
+    const deltaLon =
+        (point2.longitude - point1.longitude) *
+        Math.PI / 180;
+
+
+    const y =
+        Math.sin(deltaLon) *
+        Math.cos(lat2);
+
+
+    const x =
+        Math.cos(lat1) *
+        Math.sin(lat2) -
+
+        Math.sin(lat1) *
+        Math.cos(lat2) *
+        Math.cos(deltaLon);
+
+
+    let bearing =
+        Math.atan2(y, x) *
+        180 / Math.PI;
+
+
+    bearing =
+        (bearing + 360) % 360;
+
+
+    return bearing;
+}
+}
+// =========================
+// DÖNÜŞ YAZISI
+// =========================
+
+function getDirectionText(maneuver) {
+
+    const modifier = maneuver.modifier;
+    const type = maneuver.type;
+
+
+    if (type === "arrive") {
+        return "Hedefe ulaştın";
+    }
+
+
+    if (
+        type === "roundabout" ||
+        type === "rotary"
+    ) {
+        return "Döner kavşağa gir";
+    }
+
+
+    if (modifier === "right") {
+        return "Sağa dön";
+    }
+
+    if (modifier === "left") {
+        return "Sola dön";
+    }
+
+    if (modifier === "slight right") {
+        return "Hafif sağa dön";
+    }
+
+    if (modifier === "slight left") {
+        return "Hafif sola dön";
+    }
+
+    if (modifier === "sharp right") {
+        return "Keskin sağa dön";
+    }
+
+    if (modifier === "sharp left") {
+        return "Keskin sola dön";
+    }
+
+    if (modifier === "straight") {
+        return "Düz devam et";
+    }
+
+
+    return "Devam et";
+}
+
+
+// =========================
+// CANLI YÖNLENDİRME
+// =========================
+
+function updateLiveInstruction(latitude, longitude) {
+
+    const instructionBox =
+        document.getElementById(
+            "navigationInstruction"
+        );
+
+
+    if (
+        !instructionBox ||
+        navigationSteps.length < 2
+    ) {
+        return;
+    }
+
+
+    if (
+        currentStepIndex >= navigationSteps.length
+    ) {
+
+        instructionBox.textContent =
+            "Hedefe ulaştın";
+
+        return;
+    }
+
+
+    const step =
+        navigationSteps[currentStepIndex];
+
+
+    if (
+        !step.maneuver ||
+        !step.maneuver.location
+    ) {
+        return;
+    }
+
+
+    const turnLongitude =
+        step.maneuver.location[0];
+
+    const turnLatitude =
+        step.maneuver.location[1];
+
+
+    const distanceToTurn =
+        calculateDistance(
+
+            {
+                latitude: latitude,
+                longitude: longitude
+            },
+
+            {
+                latitude: turnLatitude,
+                longitude: turnLongitude
+            }
+
+        );
+
+
+    const directionText =
+        getDirectionText(
+            step.maneuver
+        );
+
+
+    // Hedefe geldik
+    if (
+        step.maneuver.type === "arrive" &&
+        distanceToTurn <= 25
+    ) {
+
+        instructionBox.textContent =
+            "Hedefe ulaştın";
+
+        instructionBox.style.display =
+            "block";
+
+        return;
+    }
+
+
+    // Dönüş noktasına geldik,
+    // sonraki talimata geç
+    if (
+        distanceToTurn <= 15 &&
+        currentStepIndex <
+            navigationSteps.length - 1
+    ) {
+
+        currentStepIndex++;
+
+        updateLiveInstruction(
+            latitude,
+            longitude
+        );
+
+        return;
+    }
+
+
+    // Dönüş çok yakın
+    if (distanceToTurn <= 35) {
+
+        instructionBox.textContent =
+            "Şimdi " + directionText;
+
+    }
+
+    // Normal yönlendirme
+    else {
+
+        const roundedDistance =
+            Math.round(
+                distanceToTurn / 10
+            ) * 10;
+
+
+        instructionBox.textContent =
+            roundedDistance +
+            " m sonra " +
+            directionText;
+
+    }
+
+
+    instructionBox.style.display =
+        "block";
 }
 // =========================
 // YER ARAMA
@@ -809,31 +1112,40 @@ const routeButton =
 
 async function createRoute(isAutomatic = false) {
 
+    // Zaten rota hesaplanıyorsa ikinci kez başlatma
     if (routeUpdateInProgress) {
-    return;
-}
+        return;
+    }
 
-routeUpdateInProgress = true;
 
+    // Konum yoksa
     if (currentLocation === null) {
 
-        alert("Önce KONUMUM butonuna bas.");
+        if (!isAutomatic) {
+            alert("Önce KONUMUM butonuna bas.");
+        }
 
         return;
     }
 
 
+    // Hedef yoksa
     if (destinationLocation === null) {
 
-        alert("Önce bir hedef ara.");
+        if (!isAutomatic) {
+            alert("Önce bir hedef ara.");
+        }
 
         return;
     }
+
+
+    routeUpdateInProgress = true;
 
 
     if (!isAutomatic) {
-    routeButton.textContent = "...";
-}
+        routeButton.textContent = "...";
+    }
 
 
     try {
@@ -842,6 +1154,7 @@ routeUpdateInProgress = true;
             currentLocation.longitude +
             "," +
             currentLocation.latitude;
+
 
         const end =
             destinationLocation.longitude +
@@ -854,144 +1167,174 @@ routeUpdateInProgress = true;
             start +
             ";" +
             end +
-              "?overview=full&geometries=geojson&steps=true";
+            "?overview=full&geometries=geojson&steps=true";
 
 
         const response =
             await fetch(url);
 
+
         const data =
             await response.json();
 
 
+        // Rota bulunamadıysa
         if (
             data.code !== "Ok" ||
+            !data.routes ||
             data.routes.length === 0
         ) {
 
-            alert("Rota bulunamadı.");
+            if (!isAutomatic) {
+                alert("Rota bulunamadı.");
+            }
 
             return;
         }
 
 
+        // =========================
+        // ROTA VERİSİ
+        // =========================
+
+        const routeData =
+            data.routes[0];
+
+navigationMode = true;
+
         const route =
-            data.routes[0].geometry;
-            const steps =
-    data.routes[0].legs[0].steps;
+            routeData.geometry;
 
 
-const nextStep =
-    steps.find(function (step) {
+        // =========================
+        // MESAFE VE SÜRE
+        // =========================
 
-        return step.maneuver.type !== "depart";
-
-    }) || steps[0];
-
-
-if (nextStep) {
-
-    const meters =
-        Math.round(nextStep.distance);
-
-    const modifier =
-        nextStep.maneuver.modifier;
+        const distance =
+            routeData.distance;
 
 
-    let directionText =
-        "Devam et";
+        const duration =
+            routeData.duration;
 
 
-    if (modifier === "right") {
-        directionText = "Sağa dön";
-    }
-
-    else if (modifier === "left") {
-        directionText = "Sola dön";
-    }
-
-    else if (modifier === "slight right") {
-        directionText = "Hafif sağa dön";
-    }
-
-    else if (modifier === "slight left") {
-        directionText = "Hafif sola dön";
-    }
-
-    else if (modifier === "sharp right") {
-        directionText = "Keskin sağa dön";
-    }
-
-    else if (modifier === "sharp left") {
-        directionText = "Keskin sola dön";
-    }
-
-    else if (modifier === "straight") {
-        directionText = "Düz devam et";
-    }
+        const distanceKm =
+            (distance / 1000).toFixed(1);
 
 
-    const instruction =
-        meters + " m sonra " + directionText;
+        const durationMinutes =
+            Math.round(duration / 60);
 
 
-    document.getElementById(
-        "navigationInstruction"
-    ).textContent = instruction;
+        const routeDistanceElement =
+            document.getElementById("routeDistance");
 
 
-    document.getElementById(
-        "navigationInstruction"
-    ).style.display = "block";
-
-}
-            const distance =
-    data.routes[0].distance;
-
-const duration =
-    data.routes[0].duration;
+        const routeTimeElement =
+            document.getElementById("routeTime");
 
 
-const distanceKm =
-    (distance / 1000).toFixed(1);
-
-const durationMinutes =
-    Math.round(duration / 60);
+        const routeInfoElement =
+            document.getElementById("routeInfo");
 
 
-document.getElementById("routeDistance").textContent =
-    distanceKm + " km";
+        if (routeDistanceElement) {
 
-document.getElementById("routeTime").textContent =
-    durationMinutes + " dk";
-
-document.getElementById("routeInfo").style.display =
-    "block";
-
-
-        // Eski rota varsa güncelle
-        if (map.getSource("route")) {
-
-            map.getSource("route").setData({
-                type: "Feature",
-                geometry: route
-            });
+            routeDistanceElement.textContent =
+                distanceKm + " km";
 
         }
 
-        // İlk kez rota oluşturuluyorsa
+
+        if (routeTimeElement) {
+
+            routeTimeElement.textContent =
+                durationMinutes + " dk";
+
+        }
+
+
+        if (routeInfoElement) {
+
+            routeInfoElement.style.display =
+                "block";
+
+        }
+
+
+    // =========================
+// SONRAKİ DÖNÜŞ
+// =========================
+
+const steps =
+    routeData.legs &&
+    routeData.legs[0] &&
+    routeData.legs[0].steps
+        ? routeData.legs[0].steps
+        : [];
+
+
+navigationSteps =
+    steps;
+
+
+// İlk eleman genellikle "depart"
+// olduğu için 1'den başlıyoruz
+currentStepIndex =
+    steps.length >= 2 ? 1 : 0;
+
+
+if (
+    currentLocation !== null &&
+    navigationSteps.length > 0
+) {
+
+    updateLiveInstruction(
+        currentLocation.latitude,
+        currentLocation.longitude
+    );
+
+}
+
+        // =========================
+        // ROTA ÇİZGİSİ
+        // =========================
+
+        if (map.getSource("route")) {
+
+            map.getSource("route")
+                .setData({
+
+                    type: "Feature",
+
+                    properties: {},
+
+                    geometry: route
+
+                });
+
+        }
+
         else {
 
-            map.addSource("route", {
+            map.addSource(
+                "route",
+                {
 
-                type: "geojson",
+                    type: "geojson",
 
-                data: {
-                    type: "Feature",
-                    geometry: route
+                    data: {
+
+                        type: "Feature",
+
+                        properties: {},
+
+                        geometry: route
+
+                    }
+
                 }
-
-            });
+            );
 
 
             // Siyah dış çizgi
@@ -1004,19 +1347,23 @@ document.getElementById("routeInfo").style.display =
                 source: "route",
 
                 layout: {
+
                     "line-join": "round",
                     "line-cap": "round"
+
                 },
 
                 paint: {
+
                     "line-color": "#111111",
                     "line-width": 9
+
                 }
 
             });
 
 
-            // GTA tarzı rota çizgisi
+            // Yeşil rota
             map.addLayer({
 
                 id: "route-line",
@@ -1026,13 +1373,17 @@ document.getElementById("routeInfo").style.display =
                 source: "route",
 
                 layout: {
+
                     "line-join": "round",
                     "line-cap": "round"
+
                 },
 
                 paint: {
+
                     "line-color": "#c7e64b",
                     "line-width": 5
+
                 }
 
             });
@@ -1040,83 +1391,76 @@ document.getElementById("routeInfo").style.display =
         }
 
 
-        // Rotanın tamamını ekrana sığdır
-        const coordinates =
-            route.coordinates;
+        // =========================
+        // İLK ROTA OLUŞTURULDUĞUNDA
+        // TAMAMINI EKRANA SIĞDIR
+        // =========================
 
-        const bounds =
-            new maplibregl.LngLatBounds();
+      if (!isAutomatic) {
 
+    map.easeTo({
 
-        coordinates.forEach(function (coordinate) {
+        center: [
+            currentLocation.longitude,
+            currentLocation.latitude
+        ],
 
-            bounds.extend(coordinate);
+        zoom: 16.5,
 
-        });
+        pitch: 0,
 
+        bearing: 0,
 
-        if (!isAutomatic) {
+        offset: [
+            0,
+            140
+        ],
 
-    map.fitBounds(
-        bounds,
-        {
-            padding: 80
-        }
-    );
+        duration: 1200
+
+    });
 
 }
-
 
     }
 
     catch (error) {
 
-        console.error(error);
+        console.error(
+            "Rota hatası:",
+            error
+        );
 
-        alert("Rota oluşturulurken hata oluştu.");
+
+        if (!isAutomatic) {
+
+            alert(
+                "Rota oluşturulurken hata oluştu."
+            );
+
+        }
 
     }
 
     finally {
 
-    routeUpdateInProgress = false;
+        routeUpdateInProgress =
+            false;
 
-    if (!isAutomatic) {
-        routeButton.textContent = "ROTA";
+
+        if (!isAutomatic) {
+
+            routeButton.textContent =
+                "ROTA";
+
+        }
+
     }
 
 }
-
-}
-
-
 routeButton.addEventListener(
     "click",
-    createRoute
+    function () {
+        createRoute(false);
+    }
 );
-// =========================
-// PWA SERVICE WORKER
-// =========================
-
-if ("serviceWorker" in navigator) {
-
-    window.addEventListener("load", function () {
-
-        navigator.serviceWorker.register("./sw.js")
-            .then(function () {
-
-                console.log("PWA hazır.");
-
-            })
-            .catch(function (error) {
-
-                console.error(
-                    "Service Worker hatası:",
-                    error
-                );
-
-            });
-
-    });
-
-}

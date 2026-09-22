@@ -164,7 +164,7 @@ body {
     font-size: 18px;
     font-weight: bold;
 
-    z-index: 20;
+    z-index: 50;
 
-    display: none;
+    display: block;
 }
