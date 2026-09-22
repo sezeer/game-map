@@ -469,6 +469,11 @@ let lastRoadLookupStep = -1;
 let currentRoadName = "";
 let roadLookupRequestId = 0;
 let displayedLocation = null;
+let stableGpsLocation = null;
+
+let lastStableGpsTime = null;
+
+let lastReliableSpeed = 0;
 
 
 const locationButton =
@@ -668,26 +673,33 @@ locationButton.addEventListener(
         // =========================
 
         watchId =
-            navigator.geolocation.watchPosition(
+    navigator.geolocation.watchPosition(
 
-                function (position) {
+        function (position) {
 
-                    const latitude =
-                        position.coords.latitude;
+            const stableLocation =
+                getStableGpsLocation(
+                    position
+                );
 
-                    const longitude =
-                        position.coords.longitude;
+
+const latitude =
+    stableLocation.latitude;
 
 
-                    currentLocation = {
+const longitude =
+    stableLocation.longitude;
 
-                        latitude:
-                            latitude,
 
-                        longitude:
-                            longitude
+currentLocation = {
 
-                    };
+    latitude:
+        latitude,
+
+    longitude:
+        longitude
+
+};
                     displayedLocation = {
 
     latitude:
@@ -932,16 +944,27 @@ if (
 
 
                     // =========================
-                    // NAVİGASYON KAMERASI
-                    // =========================
+// NAVİGASYON KAMERASI
+// =========================
 
-                    if (navigationMode) {
+if (navigationMode) {
 
-                        // KONUMU YUMUŞAT
-                        if (
-                            smoothCameraLocation ===
-                            null
-                        ) {
+    const cameraSpeed =
+
+        position.coords.speed !== null &&
+        Number.isFinite(
+            position.coords.speed
+        )
+
+            ? position.coords.speed
+
+            : 0;
+
+
+    // KONUMU YUMUŞAT
+    if (
+        smoothCameraLocation === null
+    ) {
 
                             smoothCameraLocation = {
 
@@ -958,7 +981,12 @@ if (
                         else {
 
                             const locationSmoothing =
-                                0.65;
+
+    cameraSpeed > 5
+
+        ? 0.55
+
+        : 0.25;
 
 
                             smoothCameraLocation
@@ -995,20 +1023,21 @@ smoothCameraLocation.longitude
                                 : map.getBearing();
 
 
-                        if (
-                            position.coords
-                                .heading !== null &&
-                            Number.isFinite(
-                                position.coords
-                                    .heading
-                            )
-                        ) {
+                       
 
-                            targetBearing =
-                                position.coords
-                                    .heading;
 
-                        }
+if (
+    cameraSpeed > 1.5 &&
+    position.coords.heading !== null &&
+    Number.isFinite(
+        position.coords.heading
+    )
+) {
+
+    targetBearing =
+        position.coords.heading;
+
+}
 
                         else if (
                             currentRouteCoordinates
@@ -1471,11 +1500,18 @@ function getNearestPointOnRoute(
         Infinity;
 
 
-    for (
-        let i = 0;
-        i < coordinates.length - 1;
-        i++
-    ) {
+    const searchLimit =
+    Math.min(
+        coordinates.length - 1,
+        40
+    );
+
+
+for (
+    let i = 0;
+    i < searchLimit;
+    i++
+) {
 
         const first =
             coordinates[i];
@@ -2320,6 +2356,217 @@ function startHeadingListener() {
 
     headingListenerStarted = true;
 }
+function getStableGpsLocation(
+    position
+) {
+
+    const rawLocation = {
+
+        latitude:
+            position.coords.latitude,
+
+        longitude:
+            position.coords.longitude
+
+    };
+
+
+    const accuracy =
+        Number.isFinite(
+            position.coords.accuracy
+        )
+            ? position.coords.accuracy
+            : 999;
+
+
+    const now =
+        Date.now();
+
+
+    if (
+        stableGpsLocation === null
+    ) {
+
+        stableGpsLocation = {
+            ...rawLocation
+        };
+
+        lastStableGpsTime =
+            now;
+
+
+        return {
+            ...stableGpsLocation
+        };
+
+    }
+
+
+    const elapsed =
+
+        Math.max(
+
+            (
+                now -
+                lastStableGpsTime
+            ) / 1000,
+
+            0.5
+
+        );
+
+
+    const distance =
+        calculateDistance(
+            stableGpsLocation,
+            rawLocation
+        );
+
+
+    let speed =
+        null;
+
+
+    if (
+        position.coords.speed !==
+            null &&
+        Number.isFinite(
+            position.coords.speed
+        )
+    ) {
+
+        speed =
+            position.coords.speed;
+
+        lastReliableSpeed =
+            speed;
+
+    }
+
+
+    else {
+
+        speed =
+            distance /
+            elapsed;
+
+    }
+
+
+    // GPS doğruluğu çok kötüyse
+    // mevcut konumu bozma
+    if (
+        accuracy > 65
+    ) {
+
+        lastStableGpsTime =
+            now;
+
+        return {
+            ...stableGpsLocation
+        };
+
+    }
+
+
+    // Araç/telefon duruyorken
+    // GPS'in küçük sıçramalarını yok say
+    if (
+        lastReliableSpeed < 1.2 &&
+        distance <
+            Math.max(
+                15,
+                accuracy
+            )
+    ) {
+
+        lastStableGpsTime =
+            now;
+
+        return {
+            ...stableGpsLocation
+        };
+
+    }
+
+
+    // Dururken bir anda çok uzağa
+    // GPS sıçraması olursa kabul etme
+    if (
+        lastReliableSpeed < 1.2 &&
+        distance > 60 &&
+        elapsed < 5
+    ) {
+
+        lastStableGpsTime =
+            now;
+
+        return {
+            ...stableGpsLocation
+        };
+
+    }
+
+
+    // Hareket hızına göre
+    // filtre gücü
+    let smoothing;
+
+
+    if (speed > 8) {
+
+        smoothing = 0.75;
+
+    }
+
+    else if (speed > 3) {
+
+        smoothing = 0.55;
+
+    }
+
+    else {
+
+        smoothing = 0.25;
+
+    }
+
+
+    if (accuracy > 25) {
+
+        smoothing *=
+            0.65;
+
+    }
+
+
+    stableGpsLocation.latitude +=
+
+        (
+            rawLocation.latitude -
+            stableGpsLocation.latitude
+        ) *
+        smoothing;
+
+
+    stableGpsLocation.longitude +=
+
+        (
+            rawLocation.longitude -
+            stableGpsLocation.longitude
+        ) *
+        smoothing;
+
+
+    lastStableGpsTime =
+        now;
+
+
+    return {
+        ...stableGpsLocation
+    };
+
+}
 async function requestHeadingPermission() {
 
     try {
@@ -2628,11 +2875,18 @@ function findNearestRouteIndex(
     let nearestDistance = Infinity;
 
 
-    for (
-        let i = 0;
-        i < coordinates.length;
-        i++
-    ) {
+    const searchLimit =
+    Math.min(
+        coordinates.length,
+        40
+    );
+
+
+for (
+    let i = 0;
+    i < searchLimit;
+    i++
+) {
 
         const routePoint = {
 
@@ -3801,8 +4055,120 @@ if (
         }
     );
 // En yakın 6 sonucu göster
+// =========================
+// AYNI MEKANLARI TEMİZLE
+// =========================
+
+const uniqueResults = [];
+
+
+results.forEach(
+    function (result) {
+
+        const properties =
+            result.properties || {};
+
+
+        const resultName =
+            (
+                properties.name ||
+                properties.street ||
+                properties.city ||
+                ""
+            )
+            .trim()
+            .toLocaleLowerCase(
+                "tr-TR"
+            );
+
+
+        const resultLocation = {
+
+            longitude:
+                result.geometry.coordinates[0],
+
+            latitude:
+                result.geometry.coordinates[1]
+
+        };
+
+
+        const isDuplicate =
+            uniqueResults.some(
+                function (existing) {
+
+                    const existingProperties =
+                        existing.properties || {};
+
+
+                    const existingName =
+                        (
+                            existingProperties.name ||
+                            existingProperties.street ||
+                            existingProperties.city ||
+                            ""
+                        )
+                        .trim()
+                        .toLocaleLowerCase(
+                            "tr-TR"
+                        );
+
+
+                    // İsim farklıysa
+                    // aynı mekan değildir
+                    if (
+                        resultName !==
+                        existingName
+                    ) {
+
+                        return false;
+
+                    }
+
+
+                    const existingLocation = {
+
+                        longitude:
+                            existing.geometry.coordinates[0],
+
+                        latitude:
+                            existing.geometry.coordinates[1]
+
+                    };
+
+
+                    const distance =
+                        calculateDistance(
+                            resultLocation,
+                            existingLocation
+                        );
+
+
+                    // Aynı isim +
+                    // 80 metreden yakınsa
+                    // duplicate kabul et
+                    return distance <= 80;
+
+                }
+            );
+
+
+        if (!isDuplicate) {
+
+            uniqueResults.push(
+                result
+            );
+
+        }
+
+    }
+);
+
+
+// Temizlenmiş sonuçlardan
+// en yakın 6 tanesini göster
 results =
-    results.slice(
+    uniqueResults.slice(
         0,
         6
     );

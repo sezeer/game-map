@@ -3331,3 +3331,155 @@ body.navigation-active #routeInfo {
     white-space:
         nowrap;
 }
+/* =========================================
+   MOBİL NAVİGASYON HUD DÜZELTMESİ
+   ========================================= */
+
+@media (max-width: 600px) {
+
+    body.navigation-active
+    #navigationInstruction {
+
+        top:
+            calc(
+                env(safe-area-inset-top) +
+                10px
+            ) !important;
+
+        left:
+            10px !important;
+
+        width:
+            calc(100vw - 130px)
+            !important;
+
+        max-width:
+            none !important;
+
+        min-width:
+            0 !important;
+
+        min-height:
+            74px !important;
+
+        padding:
+            8px 10px !important;
+
+        gap:
+            8px !important;
+
+    }
+
+
+    body.navigation-active
+    #navigationArrow {
+
+        width:
+            52px !important;
+
+        font-size:
+            34px !important;
+
+    }
+
+
+    body.navigation-active
+    #navigationDistance {
+
+        font-size:
+            27px !important;
+
+    }
+
+
+    body.navigation-active
+    #navigationAction {
+
+        font-size:
+            17px !important;
+
+        margin-top:
+            3px !important;
+
+    }
+
+
+    body.navigation-active
+    #navigationRoad {
+
+        font-size:
+            9px !important;
+
+        margin-top:
+            4px !important;
+
+        max-width:
+            125px !important;
+
+    }
+
+
+    /* İPTAL */
+
+    body.navigation-active
+    #searchBox {
+
+        top:
+            calc(
+                env(safe-area-inset-top) +
+                10px
+            ) !important;
+
+        right:
+            10px !important;
+
+        left:
+            auto !important;
+
+    }
+
+
+    body.navigation-active
+    #routeButton {
+
+        width:
+            92px !important;
+
+        min-width:
+            92px !important;
+
+        height:
+            42px !important;
+
+        font-size:
+            16px !important;
+
+    }
+
+
+    /* SÜRE / MESAFE */
+
+    body.navigation-active
+    #routeInfo {
+
+        top:
+            calc(
+                env(safe-area-inset-top) +
+                61px
+            ) !important;
+
+        right:
+            10px !important;
+
+        min-width:
+            110px !important;
+
+        padding:
+            7px 8px !important;
+
+        font-size:
+            15px !important;
+
+    }
+
+}
