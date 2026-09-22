@@ -1,4 +1,4 @@
-const CACHE_NAME = "gamemap-v1";
+const CACHE_NAME = "gamemap-v2";
 
 const FILES_TO_CACHE = [
     "./",
