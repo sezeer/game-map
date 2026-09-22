@@ -2321,38 +2321,6 @@ function updatePlayerDirection() {
     }
 
 
-    let heading =
-        deviceHeading;
-
-
-    if (
-        heading === null &&
-        lastGpsHeading !== null
-    ) {
-
-        heading =
-            lastGpsHeading;
-
-    }
-
-
-    if (heading === null) {
-        return;
-    }
-
-
-    const mapBearing =
-        map.getBearing();
-
-
-    const relativeHeading =
-        (
-            heading -
-            mapBearing +
-            360
-        ) % 360;
-
-
     const markerElement =
         playerMarker.getElement();
 
@@ -2368,10 +2336,65 @@ function updatePlayerDirection() {
     }
 
 
+    let heading = null;
+
+
+    // Önce cihaz pusulası
+    if (
+        deviceHeading !== null &&
+        Number.isFinite(deviceHeading)
+    ) {
+
+        heading =
+            deviceHeading;
+
+    }
+
+    // Olmazsa GPS hareket yönü
+    else if (
+        lastGpsHeading !== null &&
+        Number.isFinite(lastGpsHeading)
+    ) {
+
+        heading =
+            lastGpsHeading;
+
+    }
+
+
+    // Geçerli yön yoksa marker'a
+    // hiçbir transform uygulama
+    if (
+        heading === null ||
+        !Number.isFinite(heading)
+    ) {
+
+        markerSvg.style.transform =
+            "rotate(0deg)";
+
+        return;
+
+    }
+
+
+    const mapBearing =
+        map.getBearing();
+
+
+    let relativeHeading =
+        heading -
+        mapBearing;
+
+
+    relativeHeading =
+        (
+            relativeHeading +
+            360
+        ) % 360;
+
+
     markerSvg.style.transform =
-        "rotate(" +
-        relativeHeading +
-        "deg)";
+        `rotate(${relativeHeading}deg)`;
 
 }
 function handleDeviceOrientation(event) {
@@ -2407,14 +2430,17 @@ function handleDeviceOrientation(event) {
     }
 
 
-    if (heading !== null) {
+    if (
+    heading !== null &&
+    Number.isFinite(heading)
+) {
 
-        deviceHeading =
-            heading;
+    deviceHeading =
+        heading;
 
-        updatePlayerDirection();
+    updatePlayerDirection();
 
-    }
+}
 
 }
 function startHeadingListener() {

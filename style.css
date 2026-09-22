@@ -4040,3 +4040,18 @@ body.navigation-active #routeInfo {
         transform 0.15s linear;
 
 }
+.playerMarkerSvg {
+
+    display: block !important;
+
+    visibility: visible !important;
+
+    opacity: 1 !important;
+
+    transform-origin:
+        50% 50% !important;
+
+    transform-box:
+        fill-box;
+
+}
